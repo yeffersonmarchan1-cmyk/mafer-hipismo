@@ -1,0 +1,312 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Currency {
+  VES
+  USD
+}
+
+enum RaceDayStatus {
+  OPEN
+  CLOSED
+  SETTLED
+}
+
+enum HorseStatus {
+  ACTIVE
+  WITHDRAWN
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum TicketStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Player {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  bets      Bet[]
+
+  @@index([name])
+}
+
+model RaceDay {
+  id                    String             @id @default(cuid())
+  date                  DateTime
+  venue                 String             @default("La Rinconada")
+  status                RaceDayStatus      @default(OPEN)
+  firstRaceAt           DateTime?
+  closesAt              DateTime?
+  closedAt              DateTime?
+  carryoverCents        Int                @default(0)
+  carryoverAmount       Decimal            @default(0) @db.Decimal(14, 2)
+  inscriptionSource     String?
+  inscriptionsUpdatedAt DateTime?
+  rolloverFromId        String?            @unique
+  rolloverFrom          RaceDay?           @relation("RaceDayRollover", fields: [rolloverFromId], references: [id])
+  rolloverTo            RaceDay?           @relation("RaceDayRollover")
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  bets                  Bet[]
+  winningSelections     WinningSelection[]
+  settlement            Settlement?
+  entries               RaceDayHorse[]
+  tickets               Ticket[]
+
+  @@unique([date, venue])
+  @@index([date])
+  @@index([status, date])
+}
+
+model RaceDayHorse {
+  id                 String             @id @default(cuid())
+  raceDayId          String
+  legNumber          Int
+  gazetteOrder       Int                @default(0)
+  saddlecloth        Int
+  name               String
+  status             HorseStatus        @default(ACTIVE)
+  raceDay            RaceDay            @relation(fields: [raceDayId], references: [id], onDelete: Cascade)
+  originalSelections TicketSelection[]  @relation("OriginalHorse")
+  currentSelections  TicketSelection[]  @relation("CurrentHorse")
+  replacementsFrom   HorseReplacement[] @relation("ReplacementFrom")
+  replacementsTo     HorseReplacement[] @relation("ReplacementTo")
+
+  @@unique([raceDayId, legNumber, saddlecloth])
+  @@index([raceDayId, legNumber, gazetteOrder])
+  @@index([raceDayId, legNumber, status])
+}
+
+model User {
+  id              String               @id @default(cuid())
+  cedula          String               @unique
+  fullName        String
+  whatsappPhone   String
+  passwordHash    String
+  role            UserRole             @default(USER)
+  isActive        Boolean              @default(true)
+  authVersion     Int                  @default(0)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  tickets         Ticket[]             @relation("TicketOwner")
+  reviewedTickets Ticket[]             @relation("TicketReviewer")
+  resetTokens     PasswordResetToken[]
+
+  @@index([role, isActive])
+  @@index([fullName])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model LoginRateLimit {
+  keyHash         String    @id
+  attempts        Int       @default(0)
+  windowStartedAt DateTime  @default(now())
+  lockedUntil     DateTime?
+  updatedAt       DateTime  @updatedAt
+}
+
+model Ticket {
+  id              String            @id @default(cuid())
+  ticketNumber    Int
+  raceDayId       String
+  userId          String
+  combinations    BigInt
+  unitPriceUsd    Decimal           @default(5) @db.Decimal(12, 2)
+  amountUsd       Decimal           @db.Decimal(16, 2)
+  vesPerUsd       Decimal           @db.Decimal(14, 4)
+  amountVes       Decimal           @db.Decimal(18, 2)
+  status          TicketStatus      @default(PENDING)
+  rejectionReason String?
+  submittedAt     DateTime          @default(now())
+  reviewedAt      DateTime?
+  reviewedById    String?
+  raceDay         RaceDay           @relation(fields: [raceDayId], references: [id], onDelete: Restrict)
+  user            User              @relation("TicketOwner", fields: [userId], references: [id], onDelete: Restrict)
+  reviewedBy      User?             @relation("TicketReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  selections      TicketSelection[]
+  paymentProof    PaymentProof?
+  payout          TicketPayout?
+
+  @@unique([raceDayId, ticketNumber])
+  @@index([userId, submittedAt])
+  @@index([raceDayId, status, submittedAt])
+}
+
+model TicketSelection {
+  id              String             @id @default(cuid())
+  ticketId        String
+  legNumber       Int
+  originalHorseId String
+  currentHorseId  String
+  wasSubstituted  Boolean            @default(false)
+  ticket          Ticket             @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  originalHorse   RaceDayHorse       @relation("OriginalHorse", fields: [originalHorseId], references: [id], onDelete: Restrict)
+  currentHorse    RaceDayHorse       @relation("CurrentHorse", fields: [currentHorseId], references: [id], onDelete: Restrict)
+  replacements    HorseReplacement[]
+
+  @@unique([ticketId, legNumber, originalHorseId])
+  @@index([ticketId, legNumber])
+}
+
+model HorseReplacement {
+  id                String          @id @default(cuid())
+  ticketSelectionId String
+  fromHorseId       String
+  toHorseId         String
+  replacedAt        DateTime        @default(now())
+  reason            String          @default("WITHDRAWN")
+  ticketSelection   TicketSelection @relation(fields: [ticketSelectionId], references: [id], onDelete: Cascade)
+  fromHorse         RaceDayHorse    @relation("ReplacementFrom", fields: [fromHorseId], references: [id], onDelete: Restrict)
+  toHorse           RaceDayHorse    @relation("ReplacementTo", fields: [toHorseId], references: [id], onDelete: Restrict)
+
+  @@index([ticketSelectionId, replacedAt])
+}
+
+model PaymentProof {
+  id                String   @id @default(cuid())
+  ticketId          String   @unique
+  storageBucket     String   @default("payment-proofs")
+  storageKey        String
+  contentType       String
+  fileSizeBytes     Int
+  sourcePhone       String
+  expectedAmountVes Decimal  @db.Decimal(18, 2)
+  uploadedAt        DateTime @default(now())
+  ticket            Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([uploadedAt])
+}
+
+model SystemConfig {
+  id            Int      @id @default(1)
+  paymentBank   String?
+  paymentCedula String?
+  paymentPhone  String?
+  vesPerUsd     Decimal  @default(1) @db.Decimal(14, 4)
+  infoMessage   String?
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+}
+
+model Bet {
+  id                       String         @id @default(cuid())
+  raceDayId                String
+  playerId                 String
+  stakeMinor               Int
+  currency                 Currency
+  usdPerCurrencyUnitMicros Int
+  poolContributionCents    Int
+  createdAt                DateTime       @default(now())
+  raceDay                  RaceDay        @relation(fields: [raceDayId], references: [id], onDelete: Restrict)
+  player                   Player         @relation(fields: [playerId], references: [id], onDelete: Restrict)
+  selections               BetSelection[]
+  payments                 Payment[]
+  payout                   Payout?
+
+  @@index([raceDayId, createdAt])
+  @@index([playerId])
+}
+
+model BetSelection {
+  id        String @id @default(cuid())
+  betId     String
+  legNumber Int
+  horse     Int
+  bet       Bet    @relation(fields: [betId], references: [id], onDelete: Cascade)
+
+  @@unique([betId, legNumber, horse])
+  @@index([betId, legNumber])
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  betId       String
+  amountMinor Int
+  currency    Currency
+  reference   String
+  paidAt      DateTime @default(now())
+  notes       String?
+  bet         Bet      @relation(fields: [betId], references: [id], onDelete: Cascade)
+
+  @@index([betId, paidAt])
+  @@index([reference])
+}
+
+model WinningSelection {
+  id        String  @id @default(cuid())
+  raceDayId String
+  legNumber Int
+  horse     Int
+  raceDay   RaceDay @relation(fields: [raceDayId], references: [id], onDelete: Cascade)
+
+  @@unique([raceDayId, legNumber])
+  @@index([raceDayId])
+}
+
+model Settlement {
+  id                 String         @id @default(cuid())
+  raceDayId          String         @unique
+  totalPoolCents     Int
+  commissionCents    Int
+  distributableCents Int
+  payoutEachCents    Int
+  remainderCents     Int
+  winnerCount        Int
+  totalPoolUsd       Decimal        @default(0) @db.Decimal(16, 2)
+  commissionUsd      Decimal        @default(0) @db.Decimal(16, 2)
+  distributableUsd   Decimal        @default(0) @db.Decimal(16, 2)
+  isCarryover        Boolean        @default(false)
+  settledAt          DateTime       @default(now())
+  raceDay            RaceDay        @relation(fields: [raceDayId], references: [id], onDelete: Restrict)
+  payouts            Payout[]
+  ticketPayouts      TicketPayout[]
+}
+
+model TicketPayout {
+  id           String     @id @default(cuid())
+  settlementId String
+  ticketId     String     @unique
+  amountUsd    Decimal    @db.Decimal(16, 2)
+  settlement   Settlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  ticket       Ticket     @relation(fields: [ticketId], references: [id], onDelete: Restrict)
+
+  @@index([settlementId])
+}
+
+model Payout {
+  id           String     @id @default(cuid())
+  settlementId String
+  betId        String     @unique
+  amountCents  Int
+  settlement   Settlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  bet          Bet        @relation(fields: [betId], references: [id], onDelete: Restrict)
+
+  @@index([settlementId])
+}
