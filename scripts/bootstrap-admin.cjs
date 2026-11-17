@@ -15,7 +15,20 @@ async function main() {
     ? `V${cedulaInput}`
     : cedulaInput;
   const fullName = requiredEnvironment("ADMIN_NAME").replace(/\s+/g, " ");
-  const phone = requiredEnvironment("ADMIN_PHONE").replace(/[\s()-]/g, "");
+  const rawPhone = requiredEnvironment("ADMIN_PHONE").replace(/[\s().-]/g, "");
+  const nationalPhone =
+    rawPhone.startsWith("+58")
+      ? rawPhone.slice(3)
+      : rawPhone.startsWith("58") && rawPhone.length === 12
+        ? rawPhone.slice(2)
+        : rawPhone.startsWith("0") && rawPhone.length === 11
+          ? rawPhone.slice(1)
+          : rawPhone.length === 10
+            ? rawPhone
+            : "";
+  const phone = /^[24]\d{9}$/.test(nationalPhone)
+    ? `+58${nationalPhone}`
+    : "";
   const password = requiredEnvironment("ADMIN_PASSWORD");
   const secret = requiredEnvironment("AUTH_SECRET");
 
@@ -26,7 +39,7 @@ async function main() {
     throw new Error("ADMIN_NAME debe tener entre 3 y 100 caracteres.");
   }
   if (!/^\+?[1-9]\d{7,14}$/.test(phone)) {
-    throw new Error("ADMIN_PHONE debe ser un teléfono válido con código de país.");
+    throw new Error("ADMIN_PHONE debe ser un teléfono venezolano, por ejemplo 0412 123 4567.");
   }
   if (password.length < 10 || Buffer.byteLength(password, "utf8") > 72) {
     throw new Error("ADMIN_PASSWORD debe tener entre 10 y 72 bytes.");

@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { formatBs } from "@/lib/currency";
 import { requireUser } from "@/lib/auth";
+import { formatVenezuelanPhone } from "@/lib/auth-validation";
 import { prisma } from "@/lib/prisma";
 
 const ticketStatus = {
@@ -74,7 +75,7 @@ export default async function TicketsPage() {
             </div>
             <p className="mt-4 text-[11px] text-slate-500">
               {ticket.paymentProof
-                ? `Pago reportado · teléfono ${ticket.paymentProof.sourcePhone}${ticket.paymentProof.paymentReference ? ` · referencia ${ticket.paymentProof.paymentReference}` : ""}`
+                ? `Pago reportado · teléfono ${formatVenezuelanPhone(ticket.paymentProof.sourcePhone)}${ticket.paymentProof.paymentReference ? ` · referencia ${ticket.paymentProof.paymentReference}` : ""}`
                 : "Sin comprobante asociado"}
               {ticket.status === "REJECTED" && ticket.rejectionReason ? ` · Motivo: ${ticket.rejectionReason}` : ""}
             </p>

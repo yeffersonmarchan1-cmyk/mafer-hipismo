@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { Prisma } from "@prisma/client";
 import { TicketReviewActions } from "@/app/admin/payments/ticket-review-actions";
 import { formatBs } from "@/lib/currency";
+import { formatVenezuelanPhone } from "@/lib/auth-validation";
 import { prisma } from "@/lib/prisma";
 
 export default async function PaymentsAdminPage() {
@@ -82,7 +83,7 @@ export default async function PaymentsAdminPage() {
               <div>
                 <p className="text-sm font-bold text-white">Ticket #{ticket.ticketNumber} · {ticket.user.fullName}</p>
                 <p className="mt-1 text-[10px] text-slate-500">
-                  C.I. {ticket.user.cedula} · WhatsApp {ticket.user.whatsappPhone} · {new Intl.DateTimeFormat("es-VE", { dateStyle: "short", timeStyle: "short" }).format(ticket.submittedAt)}
+                  C.I. {ticket.user.cedula} · WhatsApp {formatVenezuelanPhone(ticket.user.whatsappPhone)} · {new Intl.DateTimeFormat("es-VE", { dateStyle: "short", timeStyle: "short" }).format(ticket.submittedAt)}
                 </p>
               </div>
               <span className="rounded-full border border-amber-400/15 bg-amber-400/[0.07] px-3 py-1 text-[10px] font-bold text-amber-200">Pendiente</span>
@@ -108,7 +109,7 @@ export default async function PaymentsAdminPage() {
                     <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Monto esperado</p>
                     <p className="mt-1 text-sm font-black text-white">{formatBs(ticket.amountVes.toFixed(2))}</p>
                     <p className="mt-0.5 text-[10px] text-slate-500">{ticket.combinations.toString()} combinaciones</p>
-                    {ticket.paymentProof && <p className="mt-2 text-[10px] text-slate-400">Origen: {ticket.paymentProof.sourcePhone}</p>}
+                    {ticket.paymentProof && <p className="mt-2 text-[10px] text-slate-400">Origen: {formatVenezuelanPhone(ticket.paymentProof.sourcePhone)}</p>}
                     {ticket.paymentProof?.paymentReference && <p className="mt-1 break-all text-[10px] text-slate-400">Referencia: {ticket.paymentProof.paymentReference}</p>}
                   </div>
                   {ticket.paymentProof?.storageKey && ticket.paymentProof.storageBucket ? (

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { saveSystemConfig, type AdminActionState } from "@/app/admin/actions";
+import { formatVenezuelanPhone } from "@/lib/auth-validation";
 
 export function SettingsForm({
   initial,
@@ -48,13 +49,16 @@ export function SettingsForm({
           <input
             autoComplete="tel"
             className="field mt-2"
-            defaultValue={initial.paymentPhone}
+            defaultValue={formatVenezuelanPhone(initial.paymentPhone)}
             inputMode="tel"
             maxLength={24}
             name="paymentPhone"
-            placeholder="+58 412 123 4567"
+            placeholder="0412 123 4567"
             required
           />
+          <span className="mt-1 block text-[10px] text-slate-500">
+            Número local venezolano, sin código de país.
+          </span>
         </label>
       </div>
       <label className="block text-xs font-medium text-slate-300">

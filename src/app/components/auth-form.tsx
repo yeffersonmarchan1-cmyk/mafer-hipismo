@@ -47,9 +47,12 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             inputMode="tel"
             name="whatsappPhone"
             maxLength={24}
-            placeholder="+58 412 123 4567"
+            placeholder="0412 123 4567"
             required
           />
+          <span className="mt-1.5 block text-xs font-normal text-slate-400">
+            Número venezolano, sin necesidad de escribir +58.
+          </span>
         </label>
       )}
       <label className="block text-sm font-medium text-slate-200">

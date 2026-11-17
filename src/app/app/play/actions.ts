@@ -60,7 +60,7 @@ export async function submitTicket(
   }
   const phone = normalizePhone(sourcePhone);
   if (!phone) {
-    return { error: "Escribe un teléfono de origen válido con código de país." };
+    return { error: "Escribe un teléfono venezolano válido, por ejemplo 0412 123 4567." };
   }
 
   let selectionsByLeg: string[][];

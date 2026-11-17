@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { SettingsForm } from "@/app/admin/settings/settings-form";
+import { formatVenezuelanPhone } from "@/lib/auth-validation";
 import { prisma } from "@/lib/prisma";
 
 export default async function SettingsAdminPage() {
@@ -17,7 +18,9 @@ export default async function SettingsAdminPage() {
         <SettingsForm initial={{
           paymentBank: config?.paymentBank ?? "",
           paymentCedula: config?.paymentCedula ?? "",
-          paymentPhone: config?.paymentPhone ?? "",
+          paymentPhone: config?.paymentPhone
+            ? formatVenezuelanPhone(config.paymentPhone)
+            : "",
           infoMessage: config?.infoMessage ?? "",
         }} />
       </div>

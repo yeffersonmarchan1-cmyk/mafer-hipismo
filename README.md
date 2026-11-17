@@ -59,6 +59,9 @@ En despliegue web, configura todas esas variables en el proveedor de hosting;
 no las incluyas en el cliente ni en Git. La aplicación acepta comprobantes JPG,
 PNG o WebP de hasta 5 MB y genera enlaces firmados de dos minutos solo después
 de verificar que quien los solicita es su propietario o un administrador.
+Los teléfonos de jugadores, Pago Móvil y administrador aceptan formato local
+venezolano, por ejemplo `0412 123 4567`, sin exigir el prefijo `+58`; se guardan
+normalizados internamente.
 Cada jugada debe incluir una imagen del comprobante, una referencia de pago o
 ambas. Para subir o consultar imágenes se necesitan `SUPABASE_URL` y
 `SUPABASE_SERVICE_ROLE_KEY`; los dos valores solo se usan en el servidor.

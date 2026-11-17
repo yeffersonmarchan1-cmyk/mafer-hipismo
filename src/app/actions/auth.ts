@@ -89,7 +89,7 @@ export async function register(
     return { error: "El nombre y apellido deben tener entre 3 y 100 caracteres." };
   }
   if (!whatsappPhone) {
-    return { error: "Ingresa un teléfono WhatsApp válido con código de país." };
+    return { error: "Ingresa un teléfono venezolano válido, por ejemplo 0412 123 4567." };
   }
   const passwordError = validatePassword(password);
   if (passwordError) return { error: passwordError };

@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 import { submitTicket, type TicketSubmissionState } from "@/app/app/play/actions";
 import { formatBs, formatBsFromCents } from "@/lib/currency";
+import { formatVenezuelanPhone } from "@/lib/auth-validation";
 
 type Horse = {
   id: string;
@@ -257,7 +258,7 @@ export function PlayCardSelector({
           {[
             ["Banco", payment.bank || "Pendiente de configurar"],
             ["Cédula", payment.cedula || "—"],
-            ["Teléfono", payment.phone || "—"],
+            ["Teléfono", payment.phone ? formatVenezuelanPhone(payment.phone) : "—"],
           ].map(([label, value]) => (
             <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] px-3 py-2.5" key={label}>
               <dt className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{label}</dt>
@@ -277,10 +278,13 @@ export function PlayCardSelector({
               inputMode="tel"
               maxLength={24}
               name="sourcePhone"
-              placeholder="+58 412 123 4567"
+              placeholder="0412 123 4567"
               required
               type="tel"
             />
+            <span className="mt-1 block text-[10px] text-slate-500">
+              Número venezolano, sin código de país.
+            </span>
           </label>
           <label className="block text-xs font-medium text-slate-300">
             Imagen del comprobante

@@ -245,7 +245,7 @@ export async function saveSystemConfig(
     return { error: "Indica una cédula o RIF válido para recibir pagos." };
   }
   if (!paymentPhone) {
-    return { error: "Indica un teléfono de Pago Móvil válido con código de país." };
+    return { error: "Indica un teléfono venezolano de Pago Móvil, por ejemplo 0412 123 4567." };
   }
   if (infoMessage.length > 1000) {
     return { error: "El mensaje no puede exceder 1000 caracteres." };
