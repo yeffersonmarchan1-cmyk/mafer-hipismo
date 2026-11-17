@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { deletePaymentProof, uploadPaymentProof } from "@/lib/payment-storage";
+import { recordOperationalAlert } from "@/lib/operational-alerts";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/auth-validation";
 
@@ -138,6 +139,12 @@ export async function submitTicket(
     try {
       uploaded = await uploadPaymentProof(proof, user.id);
     } catch (error) {
+      await recordOperationalAlert({
+        source: "payment-proof-upload",
+        fingerprint: "payment-proof-upload",
+        message: "Falló la carga de un comprobante privado en Supabase Storage.",
+        error,
+      });
       if (error instanceof Error) return { error: error.message };
       throw error;
     }
@@ -243,6 +250,12 @@ export async function submitTicket(
         );
         created = true;
       } catch (error) {
+        await recordOperationalAlert({
+          source: "ticket-submission-database",
+          fingerprint: "ticket-submission-database",
+          message: "Falló el guardado de un ticket en la base de datos.",
+          error,
+        });
         if (isRetryableTransactionError(error) && attempt < 2) continue;
         throw error;
       }

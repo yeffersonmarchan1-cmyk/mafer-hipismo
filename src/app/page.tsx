@@ -9,7 +9,7 @@ export default async function LandingPage() {
   if (user) redirect(user.role === "ADMIN" ? "/admin" : "/app");
 
   return (
-    <main className="page-enter relative flex min-h-screen items-center overflow-hidden bg-[radial-gradient(ellipse_at_55%_20%,rgba(127,29,29,0.2),transparent_38%),#090a0f] px-5 py-12">
+    <main className="page-enter relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[radial-gradient(ellipse_at_55%_20%,rgba(127,29,29,0.2),transparent_38%),#090a0f] px-5 py-12">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.13]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px)", backgroundSize: "64px 64px" }} />
       <div className="relative mx-auto grid w-full max-w-6xl items-center gap-14 lg:grid-cols-[1.2fr_.8fr]">
         <section>
@@ -70,6 +70,17 @@ export default async function LandingPage() {
           </div>
         </aside>
       </div>
+      <footer className="relative mx-auto mt-10 flex w-full max-w-6xl flex-wrap gap-5 border-t border-white/[0.08] pt-5 text-xs text-slate-500">
+        <Link className="hover:text-slate-300" href="/reglas">
+          Reglas de uso y juego responsable
+        </Link>
+        <Link className="hover:text-slate-300" href="/privacidad">
+          Privacidad
+        </Link>
+        <span className="basis-full text-[10px] text-amber-200/70">
+          Los textos legales publicados son borradores y requieren revisión local.
+        </span>
+      </footer>
     </main>
   );
 }

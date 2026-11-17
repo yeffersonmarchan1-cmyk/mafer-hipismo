@@ -49,3 +49,7 @@ next-env.d.ts
 
 # Windows desktop installer output
 /release
+
+# Local encrypted backups
+/backups/
+*.backup.enc

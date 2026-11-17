@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BellRing,
   BadgeCheck,
   CalendarDays,
   ClipboardList,
+  ReceiptText,
   Settings,
   Shield,
   Ticket,
@@ -14,9 +16,11 @@ import {
 } from "lucide-react";
 
 const navigationIcons = {
+  alerts: BellRing,
   "badge-check": BadgeCheck,
   calendar: CalendarDays,
   clipboard: ClipboardList,
+  receipt: ReceiptText,
   settings: Settings,
   shield: Shield,
   ticket: Ticket,

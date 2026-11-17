@@ -9,17 +9,20 @@ const modules = [
   { href: "/admin/settlement", label: "Resultados y liquidación", detail: "Registrar ganadores y calcular el pozo.", icon: "03" },
   { href: "/admin/settings", label: "Configuración", detail: "Pago móvil, tasa de cambio y mensajes.", icon: "04" },
   { href: "/admin/users", label: "Usuarios", detail: "Consultar cuentas y estado de acceso.", icon: "05" },
+  { href: "/admin/ledger", label: "Libro contable", detail: "Conciliar pagos, comisiones, premios y acumulados.", icon: "06" },
+  { href: "/admin/alerts", label: "Alertas operativas", detail: "Revisar errores del cron, Storage y liquidaciones.", icon: "07" },
 ];
 
 export default async function AdminDashboardPage() {
   await connection();
-  const [pendingPayments, openRaceDays] = await Promise.all([
+  const [pendingPayments, openRaceDays, pendingAlerts] = await Promise.all([
     prisma.ticket.count({ where: { status: "PENDING" } }),
     prisma.raceDay.findMany({
       where: { status: "OPEN" },
       orderBy: [{ venue: "asc" }, { date: "asc" }],
       select: { id: true, date: true, venue: true, entries: { select: { id: true } } },
     }),
+    prisma.operationalAlert.count({ where: { acknowledgedAt: null } }),
   ]);
 
   return (
@@ -49,6 +52,14 @@ export default async function AdminDashboardPage() {
           <p className="mt-3 text-lg font-bold text-emerald-300">Roles protegidos</p>
           <p className="mt-1 text-xs text-slate-500">Sesión verificada en cada solicitud</p>
         </article>
+        <Link
+          className="rounded-2xl border border-amber-400/10 bg-[#0d151a] p-5 transition hover:border-amber-400/30"
+          href="/admin/alerts"
+        >
+          <p className="text-xs text-slate-500">Alertas operativas</p>
+          <p className="mt-3 text-3xl font-bold text-amber-200">{pendingAlerts}</p>
+          <p className="mt-1 text-xs text-slate-500">Pendientes de revisión</p>
+        </Link>
       </section>
       <section className="mt-8">
         <div className="mb-4 flex items-end justify-between">
@@ -56,7 +67,7 @@ export default async function AdminDashboardPage() {
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Espacios de trabajo</p>
             <h2 className="mt-1 text-lg font-semibold text-white">Módulos administrativos</h2>
           </div>
-          <span className="text-[10px] text-slate-500">01 — 05</span>
+          <span className="text-[10px] text-slate-500">01 — 07</span>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           {modules.map((module) => (

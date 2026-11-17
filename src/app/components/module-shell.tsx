@@ -24,6 +24,8 @@ const adminModules = [
   { href: "/admin/settlement", label: "Resultados", icon: "trophy" },
   { href: "/admin/settings", label: "Configuración", icon: "settings" },
   { href: "/admin/users", label: "Usuarios", icon: "users" },
+  { href: "/admin/ledger", label: "Libro contable", icon: "receipt" },
+  { href: "/admin/alerts", label: "Alertas operativas", icon: "alerts" },
 ] as const;
 
 export function ModuleShell({ children, fullName, role }: ModuleShellProps) {
@@ -96,6 +98,14 @@ export function ModuleShell({ children, fullName, role }: ModuleShellProps) {
         <main className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-7 sm:px-8 sm:pt-9 lg:px-10 lg:pb-10">
           {children}
         </main>
+        <footer className="mx-auto flex max-w-[1440px] flex-wrap gap-4 px-4 pb-5 text-[10px] text-slate-600 sm:px-8 lg:px-10">
+          <Link className="hover:text-slate-300" href="/reglas">
+            Reglas de uso y juego responsable
+          </Link>
+          <Link className="hover:text-slate-300" href="/privacidad">
+            Privacidad
+          </Link>
+        </footer>
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 overflow-x-auto border-t border-white/[0.09] bg-[#0d0e14]/95 backdrop-blur-xl lg:hidden">

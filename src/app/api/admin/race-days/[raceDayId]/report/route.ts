@@ -72,6 +72,7 @@ export async function GET(
           winnerCount: true,
           commissionCents: true,
           distributableCents: true,
+          remainderCents: true,
         },
       },
     },
@@ -137,8 +138,11 @@ export async function GET(
     settlement
       ? settlement.isCarryover
         ? `Arrastre neto a la proxima jornada del mismo hipodromo: ${formatBsFromCents(settlement.distributableCents > BigInt(0) ? settlement.distributableCents : totalPoolCents)}`
-        : `Premios distribuidos: ${formatBsFromCents(settlement.distributableCents)} (${settlement.winnerCount} tickets ganadores)`
+        : `Premios pagados: ${formatBsFromCents(settlement.distributableCents - settlement.remainderCents)} (${settlement.winnerCount} tickets ganadores)`
       : `Premio o arrastre estimado 90%: ${formatBsFromCents(estimatedPrizeCents)}`,
+    ...(settlement && settlement.remainderCents > BigInt(0)
+      ? [`Residuo acumulado para la proxima jornada: ${formatBsFromCents(settlement.remainderCents)}`]
+      : []),
     `Tickets aprobados: ${raceDay.tickets.length} | Recaudacion aprobada: ${formatBsFromCents(approvedCents)}`,
   ];
   for (const line of summary) {

@@ -74,11 +74,15 @@ visitan, pero el cron permite cerrar la jornada aunque no haya usuarios activos.
 
 - La cédula se normaliza y es única; la contraseña se almacena con bcrypt
   (factor 12).
-- Las sesiones son JWT firmados con HS256 en cookies `HttpOnly`, `SameSite=Strict`
+- Las sesiones son JWT firmados con HS256 en cookies `HttpOnly`, `SameSite=Lax`
   y `Secure` en producción, con expiración de siete días.
 - Cinco intentos fallidos bloquean temporalmente los nuevos intentos de esa
   cédula. La cuenta, el rol y la versión de sesión se vuelven a verificar en
   PostgreSQL en las rutas protegidas.
+- El registro exige confirmar 18 años o más y aceptar las reglas y el aviso de
+  privacidad vigentes; se guardan las fechas y versión aceptadas. Confirma la
+  edad mínima exigida por la normativa local antes de operar. La edad solo se
+  declara en el formulario; no se verifica documentalmente.
 - El proxy de Next.js no sustituye a la autorización del servidor: cada layout
   administrativo y cada Server Action administrativa valida `ADMIN`.
 
@@ -140,13 +144,80 @@ del jugador muestra gualdrapa y nombre de todos los ejemplares activos.
 - En `/admin/users` se pueden activar/desactivar cuentas y restablecer
   contraseñas; ambas operaciones invalidan las sesiones anteriores y el sistema
   impide desactivar la última cuenta `ADMIN` activa.
+- El libro contable conserva movimientos de forma append-only y concilia cada
+  jornada. No se pueden eliminar jornadas que ya tengan movimientos; corrige
+  saldos mediante un ajuste nuevo, documentado y auditable.
 
-Al desplegar cambios de esquema, ejecuta `npm run db:deploy` antes de activar la
-nueva versión de la aplicación. La migración de bolívares conserva el importe
+Al desplegar cambios de esquema, prueba primero las migraciones en staging y
+ejecuta `npm run db:deploy` antes de activar la nueva versión de la aplicación.
+La migración de bolívares conserva el importe
 VES ya guardado por ticket, convierte los arrastres anteriores usando la tasa
 configurada en ese momento y recalcula pozos y premios liquidados a partir de
 esos importes. Verifica una copia de seguridad antes de aplicar migraciones a
 una base de datos de producción.
+
+## Respaldos y recuperación de staging
+
+El respaldo local incluye las tablas PostgreSQL y los objetos del bucket privado
+`payment-proofs`. Se comprime y cifra con AES-256-GCM. La clave debe guardarse
+fuera del repositorio y fuera del propio respaldo. Genera una clave independiente
+de `AUTH_SECRET` y guárdala en un gestor de secretos:
+
+```powershell
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
+```
+
+Completa `BACKUP_ENCRYPTION_KEY`, `DATABASE_URL`, `SUPABASE_URL` y
+`SUPABASE_SERVICE_ROLE_KEY` en un `.env` local con acceso restringido. No guardes
+respaldos ni claves en Git, tickets, chats o el navegador. Luego:
+
+```powershell
+npm run backup
+npm run backup:verify -- "backups\mafer-backup-FECHA.backup.enc"
+```
+
+Ejecuta y verifica respaldos con la frecuencia definida por la operación y
+conserva copias fuera del equipo donde se generan. El script local no agenda
+respaldos automáticamente; configura además la retención/copia administrada que
+ofrezca el proveedor de PostgreSQL y prueba periódicamente la recuperación.
+
+Para una prueba de recuperación, crea un proyecto Supabase de staging separado
+de producción, configura su base de datos de forma exclusiva en el ambiente
+Preview del hosting con `DATABASE_URL` apuntando a staging y las variables
+`SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` de ese mismo proyecto. La aplicación
+no lee `STAGING_DATABASE_URL`; esa variable se reserva para el restaurador local.
+Aplica allí las migraciones y crea un bucket privado vacío llamado
+`payment-proofs`. En el `.env` local, define `STAGING_DATABASE_URL`,
+`STAGING_SUPABASE_URL`, `STAGING_SUPABASE_SERVICE_ROLE_KEY` y una
+`STAGING_ADMIN_PASSWORD` de al menos 16 caracteres que no se use en producción.
+Verifica cuidadosamente que las URLs sean del proyecto de staging. Luego:
+
+```powershell
+$env:DATABASE_URL = "PEGA_AQUI_LA_URL_DE_BASE_DE_DATOS_DE_STAGING"
+npm run db:deploy
+Remove-Item Env:DATABASE_URL
+npm run restore:staging -- "backups\mafer-backup-FECHA.backup.enc"
+```
+
+El restaurador exige tablas vacías, coincidencia entre base y Storage de staging,
+un proyecto distinto al origen y un bucket privado vacío. Anonimiza cédulas,
+nombres, referencias, teléfonos y nombres de actores del libro, deja solo una
+cuenta `ADMIN` activa con la contraseña temporal de staging, vacía tokens y
+límites de acceso, y **no copia imágenes de comprobantes**. Así se puede
+ensayar la recuperación funcional sin replicar esas imágenes personales. No
+uses la recuperación a staging para restaurar producción.
+
+## Privacidad y reglas
+
+Las páginas `/reglas` y `/privacidad` son borradores operativos y están marcadas
+como tales. Antes de producción, completa identidad/contacto del responsable,
+edad mínima, conservación y reclamos, y solicita revisión legal venezolana. El
+código no sustituye licencias ni determina si la operación está autorizada.
+
+Las liquidaciones están cubiertas por pruebas del cálculo monetario y el panel
+admin incluye un libro contable conciliable y una bandeja de alertas. Las
+alertas se muestran dentro del panel; para avisos externos, configura
+notificaciones en el proveedor de hosting.
 
 ## Escritorio Windows
 

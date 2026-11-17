@@ -34,6 +34,21 @@ enum TicketStatus {
   REJECTED
 }
 
+enum FinancialLedgerType {
+  TICKET_APPROVED
+  LOGISTICS_COMMISSION
+  PRIZE_PAYOUT
+  CARRYOVER_IN
+  CARRYOVER_OUT
+  OPENING_BALANCE
+  ADJUSTMENT
+}
+
+enum OperationalAlertSeverity {
+  WARNING
+  ERROR
+}
+
 model Player {
   id        String   @id @default(cuid())
   name      String
@@ -94,19 +109,24 @@ model RaceDayHorse {
 }
 
 model User {
-  id              String               @id @default(cuid())
-  cedula          String               @unique
-  fullName        String
-  whatsappPhone   String
-  passwordHash    String
-  role            UserRole             @default(USER)
-  isActive        Boolean              @default(true)
-  authVersion     Int                  @default(0)
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  tickets         Ticket[]             @relation("TicketOwner")
-  reviewedTickets Ticket[]             @relation("TicketReviewer")
-  resetTokens     PasswordResetToken[]
+  id                 String               @id @default(cuid())
+  cedula             String               @unique
+  fullName           String
+  whatsappPhone      String
+  passwordHash       String
+  role               UserRole             @default(USER)
+  isActive           Boolean              @default(true)
+  authVersion        Int                  @default(0)
+  termsAcceptedAt    DateTime?
+  privacyAcceptedAt  DateTime?
+  ageConfirmedAt     DateTime?
+  policyVersion      String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  tickets            Ticket[]             @relation("TicketOwner")
+  reviewedTickets    Ticket[]             @relation("TicketReviewer")
+  resetTokens        PasswordResetToken[]
+  acknowledgedAlerts OperationalAlert[]   @relation("AlertAcknowledgement")
 
   @@index([role, isActive])
   @@index([fullName])
@@ -296,6 +316,44 @@ model TicketPayout {
   ticket       Ticket     @relation(fields: [ticketId], references: [id], onDelete: Restrict)
 
   @@index([settlementId])
+}
+
+model FinancialLedgerEntry {
+  id           String              @id @default(cuid())
+  raceDayId    String?
+  raceDayDate  DateTime?
+  venue        String?
+  ticketId     String?
+  ticketNumber Int?
+  settlementId String?
+  actorUserId  String?
+  actorName    String?
+  type         FinancialLedgerType
+  amountCents  BigInt
+  reference    String              @unique
+  description  String
+  createdAt    DateTime            @default(now())
+
+  @@index([raceDayId, createdAt])
+  @@index([type, createdAt])
+}
+
+model OperationalAlert {
+  id               String                   @id @default(cuid())
+  fingerprint      String                   @unique
+  source           String
+  severity         OperationalAlertSeverity @default(ERROR)
+  message          String
+  metadataJson     String?
+  occurrenceCount  Int                      @default(1)
+  firstSeenAt      DateTime                 @default(now())
+  lastSeenAt       DateTime                 @default(now())
+  acknowledgedAt   DateTime?
+  acknowledgedById String?
+  acknowledgedBy   User?                    @relation("AlertAcknowledgement", fields: [acknowledgedById], references: [id], onDelete: SetNull)
+
+  @@index([acknowledgedAt, lastSeenAt])
+  @@index([severity, lastSeenAt])
 }
 
 model Payout {

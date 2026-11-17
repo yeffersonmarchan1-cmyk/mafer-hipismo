@@ -163,10 +163,15 @@ export default async function OfficialBoardPage({
           ) : (
             <>
               <p className="mt-4 text-sm text-slate-300">
-                Pozo repartido: <strong className="text-white">{formatBs(raceDay.settlement.distributableVes.toFixed(2))}</strong>
+                Premios pagados: <strong className="text-white">{formatBsFromCents(raceDay.settlement.distributableCents - raceDay.settlement.remainderCents)}</strong>
                 {" · "}Comisión logística 10%: <strong className="text-white">{formatBs(raceDay.settlement.commissionVes.toFixed(2))}</strong>
                 {" · "}Premio por cuadro: <strong className="text-green-300">{formatBsFromCents(raceDay.settlement.payoutEachCents)}</strong>
               </p>
+              {raceDay.settlement.remainderCents > BigInt(0) && (
+                <p className="mt-2 text-xs text-amber-200">
+                  Residuo de {formatBsFromCents(raceDay.settlement.remainderCents)} agregado al acumulado de la próxima jornada.
+                </p>
+              )}
               <div className="mt-4 divide-y divide-white/[0.06] rounded-xl border border-white/[0.06]">
                 {raceDay.settlement.ticketPayouts.map((payout) => (
                   <div className="flex items-center justify-between gap-3 px-4 py-3" key={payout.id}>

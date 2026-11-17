@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUserFromToken, SESSION_COOKIE } from "@/lib/auth";
 import { downloadPaymentProof } from "@/lib/payment-storage";
+import { recordOperationalAlert } from "@/lib/operational-alerts";
 import { prisma } from "@/lib/prisma";
 
 const allowedContentTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -84,6 +85,20 @@ export async function GET(
       },
     });
   } catch (error) {
+    if (phase === "storage download" || phase === "ticket lookup") {
+      await recordOperationalAlert({
+        source:
+          phase === "storage download"
+            ? "payment-proof-storage"
+            : "payment-proof-lookup",
+        fingerprint: `payment-proof:${phase}`,
+        message:
+          phase === "storage download"
+            ? "Falló la descarga de un comprobante privado desde Supabase Storage."
+            : "Falló la consulta del registro de acceso a un comprobante.",
+        error,
+      });
+    }
     const errorName = error instanceof Error ? error.name : "UnknownError";
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";

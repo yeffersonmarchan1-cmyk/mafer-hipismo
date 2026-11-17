@@ -51,6 +51,7 @@ export default async function RaceDayReportPage({
           isCarryover: true,
           commissionCents: true,
           distributableCents: true,
+          remainderCents: true,
         },
       },
     },
@@ -100,11 +101,12 @@ export default async function RaceDayReportPage({
             <>
               <Summary label="Comisión liquidada" value={formatBsFromCents(actualSettlement.commissionCents)} />
               <Summary
-                label={actualSettlement.isCarryover ? "Arrastre neto · jornada desierta" : "Premios distribuidos"}
+                label={actualSettlement.isCarryover ? "Arrastre neto · jornada desierta" : "Premios pagados"}
                 value={formatBsFromCents(
-                  actualSettlement.isCarryover && actualSettlement.distributableCents === BigInt(0)
-                    ? totalPoolCents
-                    : actualSettlement.distributableCents,
+                  actualSettlement.distributableCents -
+                    (actualSettlement.isCarryover
+                      ? BigInt(0)
+                      : actualSettlement.remainderCents),
                 )}
               />
             </>
@@ -117,9 +119,11 @@ export default async function RaceDayReportPage({
         </section>
         <p className="mt-3 text-xs leading-5 text-slate-600">
           {actualSettlement?.isCarryover
-            ? `No hubo tickets ganadores: se retuvo ${formatBsFromCents(actualSettlement.commissionCents)} de comisión logística y ${formatBsFromCents(actualSettlement.distributableCents === BigInt(0) ? totalPoolCents : actualSettlement.distributableCents)} queda como arrastre para la próxima jornada de este mismo hipódromo.`
+            ? `No hubo tickets ganadores: se retuvo ${formatBsFromCents(actualSettlement.commissionCents)} de comisión logística y ${formatBsFromCents(actualSettlement.distributableCents)} queda como arrastre para la próxima jornada de este mismo hipódromo.`
             : actualSettlement
-              ? `Resultado liquidado con ${actualSettlement.winnerCount} ticket(s) ganador(es).`
+              ? actualSettlement.remainderCents > BigInt(0)
+                ? `Resultado liquidado con ${actualSettlement.winnerCount} ticket(s) ganador(es). El residuo de ${formatBsFromCents(actualSettlement.remainderCents)} se conserva en el acumulado de la próxima jornada.`
+                : `Resultado liquidado con ${actualSettlement.winnerCount} ticket(s) ganador(es).`
               : "Al liquidar se retendrá el 10% como comisión logística. El 90% restante se repartirá entre los ganadores o, si no hay ganadores, pasará como arrastre a la próxima jornada del mismo hipódromo."}
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">

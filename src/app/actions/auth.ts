@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { setSession } from "@/lib/auth";
 import { normalizeCedula, normalizePhone } from "@/lib/auth-validation";
+import { policyVersion } from "@/lib/policy-version";
 
 export type AuthFormState = {
   error?: string;
@@ -76,6 +77,9 @@ export async function register(
   const fullNameInput = formData.get("fullName");
   const phoneInput = formData.get("whatsappPhone");
   const passwordInput = formData.get("password");
+  const termsAccepted = formData.get("acceptTerms") === "on";
+  const privacyAccepted = formData.get("acceptPrivacy") === "on";
+  const ageConfirmed = formData.get("confirmAdult") === "on";
   const cedula =
     typeof cedulaInput === "string" ? normalizeCedula(cedulaInput) : null;
   const fullName =
@@ -91,15 +95,31 @@ export async function register(
   if (!whatsappPhone) {
     return { error: "Ingresa un teléfono venezolano válido, por ejemplo 0412 123 4567." };
   }
+  if (!termsAccepted || !privacyAccepted || !ageConfirmed) {
+    return {
+      error:
+        "Debes confirmar que tienes 18 años o más y aceptar las reglas y el aviso de privacidad.",
+    };
+  }
   const passwordError = validatePassword(password);
   if (passwordError) return { error: passwordError };
   rateLimitKey(cedula);
 
   const passwordHash = await bcrypt.hash(password, 12);
+  const acceptedAt = new Date();
   let user;
   try {
     user = await prisma.user.create({
-      data: { cedula, fullName, whatsappPhone, passwordHash },
+      data: {
+        cedula,
+        fullName,
+        whatsappPhone,
+        passwordHash,
+        termsAcceptedAt: acceptedAt,
+        privacyAcceptedAt: acceptedAt,
+        ageConfirmedAt: acceptedAt,
+        policyVersion,
+      },
       select: { id: true, role: true, authVersion: true },
     });
   } catch (error) {

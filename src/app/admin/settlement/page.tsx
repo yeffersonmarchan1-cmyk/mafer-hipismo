@@ -87,11 +87,14 @@ export default async function SettlementAdminPage({
                 <Summary label="Ganadores" value={String(raceDay.settlement.winnerCount)} />
                 <Summary
                   label={raceDay.settlement.isCarryover ? "Arrastre neto" : "Pozo a repartir"}
-                  value={formatBs(
-                    raceDay.settlement.distributableVes.gt(0)
-                      ? raceDay.settlement.distributableVes.toFixed(2)
-                      : raceDay.settlement.totalPoolVes.toFixed(2),
-                  )}
+                  value={
+                    raceDay.settlement.isCarryover
+                      ? formatBs(raceDay.settlement.distributableVes.toFixed(2))
+                      : formatBsFromCents(
+                          raceDay.settlement.distributableCents -
+                            raceDay.settlement.remainderCents,
+                        )
+                  }
                 />
               </div>
               <div className="mt-5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
@@ -127,9 +130,11 @@ export default async function SettlementAdminPage({
                       </div>
                     ))}
                   </div>
-                  <p className="mt-3 text-[10px] text-slate-500">
-                    Premio por ticket: {formatBsFromCents(raceDay.settlement.payoutEachCents)} · remanente indivisible: {raceDay.settlement.remainderCents.toString()} centavos.
-                  </p>
+                      {raceDay.settlement.remainderCents > BigInt(0) && (
+                        <p className="mt-3 text-[10px] text-slate-500">
+                          El residuo indivisible de {formatBsFromCents(raceDay.settlement.remainderCents)} se trasladó al acumulado de la próxima jornada.
+                        </p>
+                      )}
                 </div>
               )}
             </>
