@@ -1,8 +1,11 @@
 import { connection } from "next/server";
-import { addHorse, toggleHorseStatus, updateHorse } from "@/app/actions";
 import { closeRaceDay } from "@/app/admin/actions";
 import { closeDueRaceDays as closeScheduledRaceDays } from "@/lib/close-race-days";
 import { InscriptionImporter } from "@/app/inscription-importer";
+import {
+  HorseManagementPanel,
+  ManualRaceDayCreator,
+} from "@/app/admin/jornadas/horse-management";
 import { prisma } from "@/lib/prisma";
 
 function nextSunday(): string {
@@ -81,6 +84,8 @@ export default async function RaceDaysAdminPage() {
         <InscriptionImporter initialDate={nextSunday()} />
       </section>
 
+      {!openDay && <ManualRaceDayCreator initialDate={nextSunday()} />}
+
       <section className="space-y-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Archivo</p>
@@ -117,63 +122,48 @@ export default async function RaceDaysAdminPage() {
               )}
             </header>
 
-            <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-3">
-              {Array.from({ length: 6 }, (_, index) => {
-                const legNumber = index + 1;
-                const horses = day.entries.filter((horse) => horse.legNumber === legNumber);
-                return (
-                  <section className="rounded-xl border border-white/[0.06] bg-[#091115] p-4" key={legNumber}>
-                    <div className="mb-3 flex items-center justify-between">
-                      <h4 className="text-sm font-semibold text-white">Válida {legNumber}</h4>
-                      <span className="text-[10px] text-slate-500">{horses.filter((horse) => horse.status === "ACTIVE").length} activos</span>
-                    </div>
-                    {horses.length ? (
-                      <ul className="space-y-2">
-                        {horses.map((horse) => (
-                          <li className="rounded-lg border border-white/[0.05] bg-white/[0.02] p-3" key={horse.id}>
-                            <form action={updateHorse} className="flex items-center gap-2">
-                              <label className="sr-only" htmlFor={`cloth-${horse.id}`}>Gualdrapa de {horse.name}</label>
-                              <input className="w-12 rounded-md border border-white/[0.08] bg-[#0b1418] px-2 py-1.5 text-center text-xs font-semibold text-slate-200" disabled={day.status !== "OPEN"} id={`cloth-${horse.id}`} max="99" min="1" name="saddlecloth" type="number" defaultValue={horse.saddlecloth} />
-                              <label className="sr-only" htmlFor={`name-${horse.id}`}>Nombre de ejemplar</label>
-                              <input className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-1 py-1.5 text-xs text-slate-200 focus:border-emerald-400/40 focus:outline-none" disabled={day.status !== "OPEN"} id={`name-${horse.id}`} maxLength={120} name="name" defaultValue={horse.name} />
-                              <input type="hidden" name="id" value={horse.id} />
-                              {day.status === "OPEN" && (
-                                <button className="text-[10px] font-semibold text-emerald-300 hover:text-emerald-200" type="submit">Guardar</button>
-                              )}
-                            </form>
-                            <div className="mt-2 flex items-center justify-between">
-                              <span className={`text-[9px] font-bold uppercase tracking-wider ${horse.status === "ACTIVE" ? "text-green-400" : "text-rose-300"}`}>
+            {day.status === "OPEN" ? (
+              <HorseManagementPanel
+                horses={day.entries.map((horse) => ({
+                  id: horse.id,
+                  legNumber: horse.legNumber,
+                  saddlecloth: horse.saddlecloth,
+                  name: horse.name,
+                  status: horse.status,
+                }))}
+                raceDayId={day.id}
+              />
+            ) : (
+              <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-3">
+                {Array.from({ length: 6 }, (_, index) => {
+                  const legNumber = index + 1;
+                  const horses = day.entries.filter((horse) => horse.legNumber === legNumber);
+                  return (
+                    <section className="rounded-xl border border-white/[0.06] bg-[#091115] p-4" key={legNumber}>
+                      <div className="mb-3 flex items-center justify-between">
+                        <h4 className="text-sm font-semibold text-white">Válida {legNumber}</h4>
+                        <span className="text-[10px] text-slate-500">{horses.filter((horse) => horse.status === "ACTIVE").length} activos</span>
+                      </div>
+                      {horses.length ? (
+                        <ul className="space-y-2">
+                          {horses.map((horse) => (
+                            <li className="rounded-lg border border-white/[0.05] bg-white/[0.02] p-3 text-xs text-slate-300" key={horse.id}>
+                              <span className="mr-2 font-bold text-white">{horse.saddlecloth}.</span>
+                              {horse.name}
+                              <span className={`ml-2 text-[9px] font-bold uppercase ${horse.status === "ACTIVE" ? "text-green-300" : "text-rose-300"}`}>
                                 {horse.status === "ACTIVE" ? "Activo" : "Retirado"}
                               </span>
-                              {day.status === "OPEN" && (
-                                <form action={toggleHorseStatus}>
-                                  <input type="hidden" name="id" value={horse.id} />
-                                  <input type="hidden" name="status" value={horse.status === "ACTIVE" ? "WITHDRAWN" : "ACTIVE"} />
-                                  <button className="text-[10px] text-slate-500 underline underline-offset-2 hover:text-slate-300" type="submit">
-                                    {horse.status === "ACTIVE" ? "Marcar retirado" : "Reactivar"}
-                                  </button>
-                                </form>
-                              )}
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="py-2 text-xs text-slate-500">Sin ejemplares cargados.</p>
-                    )}
-                    {day.status === "OPEN" && (
-                      <form action={addHorse} className="mt-3 flex items-center gap-2 border-t border-white/[0.06] pt-3">
-                        <input type="hidden" name="raceDayId" value={day.id} />
-                        <input type="hidden" name="legNumber" value={legNumber} />
-                        <input aria-label={`Gualdrapa válida ${legNumber}`} className="w-12 rounded-md border border-white/[0.08] bg-[#0b1418] px-2 py-1.5 text-center text-xs text-white" max="99" min="1" name="saddlecloth" placeholder="#" required type="number" />
-                        <input aria-label={`Nombre válida ${legNumber}`} className="min-w-0 flex-1 rounded-md border border-white/[0.08] bg-[#0b1418] px-2 py-1.5 text-xs text-white placeholder:text-slate-600" maxLength={120} name="name" placeholder="Agregar ejemplar" required />
-                        <button className="rounded-md bg-emerald-400/10 px-2.5 py-1.5 text-[10px] font-bold text-emerald-300" type="submit">Agregar</button>
-                      </form>
-                    )}
-                  </section>
-                );
-              })}
-            </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="py-2 text-xs text-slate-500">Sin ejemplares cargados.</p>
+                      )}
+                    </section>
+                  );
+                })}
+              </div>
+            )}
           </article>
         ))}
       </section>

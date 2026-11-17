@@ -85,6 +85,20 @@ escaneados necesitan OCR, que todavía no está incluido. Al importar configura
 la hora de la primera válida en hora de Caracas; el sistema programa el cierre
 30 minutos antes y conserva el botón de cierre manual.
 
+Si no tienes el programa oficial, `/admin/jornadas` también permite crear una
+jornada vacía indicando fecha y hora de la primera válida. En **Administrar
+carreras** selecciona una de las seis válidas y agrega ejemplares de uno en
+uno o pega una lista con formatos como `1. Pecadora`, `1 - Pecadora` o
+`1 Pecadora`, uno por línea. Los números repetidos en una misma lista se
+rechazan; los números ya existentes actualizan el nombre sin reactivar un
+ejemplar retirado. Se pueden editar gualdrapa y nombre, retirar/reactivar,
+eliminar individualmente o limpiar la válida completa.
+
+Para preservar el historial, eliminar o limpiar se bloquea si los ejemplares
+están referenciados por tickets o registros de sustitución; en ese caso se
+pueden marcar como retirados. La lista se guarda en PostgreSQL y el selector
+del jugador muestra gualdrapa y nombre de todos los ejemplares activos.
+
 ## Operación de jornadas
 
 - Los jugadores seleccionan ejemplares activos de las seis válidas. El servidor
