@@ -11,7 +11,7 @@ type ModuleShellProps = {
 };
 
 const playerModules = [
-  { href: "/app/play", label: "Jugar 5y6", icon: "trophy" },
+  { href: "/app/play", label: "Jugar Cuadro Perfecto", icon: "trophy" },
   { href: "/app/tickets", label: "Mis tickets", icon: "ticket" },
   { href: "/app/board", label: "Pizarra oficial", icon: "clipboard" },
 ] as const;
@@ -78,7 +78,7 @@ export function ModuleShell({ children, fullName, role }: ModuleShellProps) {
           </Link>
           <div className="hidden text-xs text-slate-500 sm:block">
             LA RINCONADA <span className="mx-2 text-slate-700">/</span>
-            <span className="text-slate-300">{role === "ADMIN" ? "CENTRO DE CONTROL" : "5Y6"}</span>
+            <span className="text-slate-300">{role === "ADMIN" ? "CENTRO DE CONTROL" : "CUADRO PERFECTO"}</span>
           </div>
           <div className="ml-auto">
             <InstallAppButton />

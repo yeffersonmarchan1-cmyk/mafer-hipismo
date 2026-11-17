@@ -16,7 +16,7 @@ export default async function LandingPage() {
             <span className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-red-400 to-red-700 text-lg font-black text-white shadow-lg shadow-red-950/40">M</span>
             <span>
               <span className="block text-sm font-black tracking-[0.18em]">MAFER HIPISMO</span>
-              <span className="mt-1 block text-[10px] font-semibold tracking-[0.25em] text-emerald-400">LA RINCONADA · 5Y6</span>
+              <span className="mt-1 block text-[10px] font-semibold tracking-[0.25em] text-emerald-400">LA RINCONADA · CUADRO PERFECTO</span>
             </span>
           </Link>
           <p className="mt-16 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/[0.05] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-300">
@@ -24,7 +24,7 @@ export default async function LandingPage() {
             La emoción de cada válida
           </p>
           <h1 className="mt-6 max-w-2xl text-5xl font-black leading-[1.02] tracking-tight text-white sm:text-6xl">
-            Tu 5y6.
+            Tu Cuadro Perfecto.
             <span className="block text-emerald-400">Tu jugada.</span>
             La Rinconada.
           </h1>
@@ -47,7 +47,7 @@ export default async function LandingPage() {
             <div className="flex items-center justify-between border-b border-white/[0.07] pb-5">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">La Rinconada</p>
-                <p className="mt-1 text-lg font-bold text-white">El 5y6</p>
+                <p className="mt-1 text-lg font-bold text-white">El Cuadro Perfecto</p>
               </div>
               <span className="rounded-full border border-emerald-400/20 bg-emerald-400/[0.06] px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-emerald-300">La Rinconada</span>
             </div>
@@ -64,7 +64,7 @@ export default async function LandingPage() {
             ))}
             <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-400/[0.07] p-4">
               <span className="text-xs font-medium text-slate-300">Un espacio. Seis válidas.</span>
-              <span className="text-xs font-bold text-emerald-300">MAFER 5Y6</span>
+              <span className="text-xs font-bold text-emerald-300">CUADRO PERFECTO</span>
             </div>
           </div>
         </aside>

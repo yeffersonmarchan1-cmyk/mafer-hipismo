@@ -14,7 +14,7 @@ export default async function RegisterPage() {
           <span className="flex size-11 items-center justify-center rounded-xl bg-gradient-to-br from-red-400 to-red-700 text-base font-black text-white shadow-lg shadow-red-950/40">M</span>
           <span>
             <span className="block text-sm font-black tracking-[0.18em]">MAFER HIPISMO</span>
-            <span className="mt-1 block text-center text-[9px] font-semibold tracking-[0.25em] text-emerald-400">LA RINCONADA · 5Y6</span>
+            <span className="mt-1 block text-center text-[9px] font-semibold tracking-[0.25em] text-emerald-400">LA RINCONADA · CUADRO PERFECTO</span>
           </span>
         </Link>
         <div className="rounded-2xl border border-white/[0.09] bg-[#0c1419]/95 p-6 shadow-2xl shadow-black/30 sm:p-8">

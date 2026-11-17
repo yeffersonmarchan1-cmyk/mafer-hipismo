@@ -86,7 +86,7 @@ export function PlayCardSelector({
           Módulo 01 · Jugador
         </p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">
-          Jugar 5y6
+          Jugar Cuadro Perfecto
         </h1>
         <p className="mt-2 text-sm text-slate-400">
           Arma tu cuadro con los ejemplares oficiales de La Rinconada.

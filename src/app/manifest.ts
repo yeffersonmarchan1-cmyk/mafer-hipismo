@@ -3,9 +3,9 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "MAFER Hipismo — 5y6 La Rinconada",
-    short_name: "MAFER 5y6",
-    description: "Arma tu cuadro 5y6 y sigue las jornadas de La Rinconada.",
+    name: "MAFER Hipismo — Cuadro Perfecto",
+    short_name: "Cuadro Perfecto",
+    description: "Arma tu Cuadro Perfecto y sigue las jornadas de La Rinconada.",
     start_url: "/",
     scope: "/",
     display: "standalone",

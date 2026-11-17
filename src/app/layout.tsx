@@ -3,8 +3,8 @@ import { Suspense, type ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MAFER Hipismo | 5y6 La Rinconada",
-  description: "Tu 5y6 de La Rinconada, con jugadas organizadas y resultados transparentes.",
+  title: "MAFER Hipismo | Cuadro Perfecto La Rinconada",
+  description: "Tu Cuadro Perfecto de La Rinconada, con jugadas organizadas y resultados transparentes.",
   applicationName: "MAFER Hipismo",
   appleWebApp: {
     capable: true,

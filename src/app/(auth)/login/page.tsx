@@ -17,7 +17,7 @@ export default async function LoginPage() {
           <span>
             <span className="block text-base font-black tracking-[0.18em]">MAFER HIPISMO</span>
             <span className="mt-1 block text-center text-[10px] font-semibold tracking-[0.25em] text-emerald-400">
-              LA RINCONADA · 5Y6
+              LA RINCONADA · CUADRO PERFECTO
             </span>
           </span>
         </Link>

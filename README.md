@@ -1,12 +1,12 @@
 # MAFER Hipismo
 
-Plataforma mobile-first para cuadros del 5y6 de La Rinconada. Utiliza Next.js
+Plataforma mobile-first para jugar al **Cuadro Perfecto** de La Rinconada. Utiliza Next.js
 App Router, TypeScript, Tailwind CSS, Prisma y PostgreSQL (Supabase). Electron
 continúa disponible para generar el instalador Windows de escritorio.
 
 ## Módulos
 
-- **Jugador (`USER`)**: jugar 5y6, mis tickets y pizarra oficial.
+- **Jugador (`USER`)**: jugar al Cuadro Perfecto, consultar mis tickets y la pizarra oficial.
 - **Administrador (`ADMIN`)**: jornadas e inscritos, validación de pagos,
   resultados/liquidación, configuración y usuarios.
 - Los datos del jugador y los tickets se leen en el servidor con el ID de la
