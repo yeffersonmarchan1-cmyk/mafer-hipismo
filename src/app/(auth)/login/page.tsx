@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { BrandMark } from "@/app/components/brand-mark";
 import { AuthForm } from "@/app/components/auth-form";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -11,9 +12,7 @@ export default async function LoginPage() {
     <main className="page-enter flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_50%_-20%,rgba(127,29,29,0.25),transparent_55%),#090a0f] px-4 py-10">
       <section className="w-full max-w-md">
         <Link className="mb-9 flex items-center justify-center gap-3" href="/">
-          <span className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-red-400 to-red-700 text-lg font-black text-white shadow-lg shadow-red-950/40">
-            M
-          </span>
+          <BrandMark className="size-12 rounded-2xl shadow-lg shadow-red-950/40" size={48} />
           <span>
             <span className="block text-base font-black tracking-[0.18em]">MAFER HIPISMO</span>
             <span className="mt-1 block text-center text-[10px] font-semibold tracking-[0.25em] text-emerald-400">
