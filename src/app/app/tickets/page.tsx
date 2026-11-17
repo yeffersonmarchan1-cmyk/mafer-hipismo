@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import Link from "next/link";
+import { PaymentProofViewer } from "@/app/components/payment-proof-viewer";
 import { formatBs } from "@/lib/currency";
 import { requireUser } from "@/lib/auth";
 import { formatVenezuelanPhone } from "@/lib/auth-validation";
@@ -97,14 +98,10 @@ export default async function TicketsPage() {
                     </Link>
                   )}
                 {ticket.paymentProof?.storageKey && ticket.paymentProof.storageBucket && (
-                  <a
-                    className="text-[10px] font-semibold text-red-300 underline decoration-red-500/30 underline-offset-4 hover:text-red-200"
-                    href={`/api/payment-proofs/${ticket.id}`}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    Ver mi comprobante
-                  </a>
+                  <PaymentProofViewer
+                    label="Ver mi comprobante"
+                    ticketId={ticket.id}
+                  />
                 )}
               </div>
             </div>

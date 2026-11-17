@@ -1,15 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUserFromToken, SESSION_COOKIE } from "@/lib/auth";
 import { downloadPaymentProof } from "@/lib/payment-storage";
 import { prisma } from "@/lib/prisma";
 
 const allowedContentTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ ticketId: string }> },
 ) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserFromToken(
+    request.cookies.get(SESSION_COOKIE)?.value,
+  );
   if (!user) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }

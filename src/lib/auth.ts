@@ -26,15 +26,14 @@ export async function setSession(user: {
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     maxAge: sessionMaxAge,
     priority: "high",
   });
 }
 
-export async function getCurrentUser() {
-  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+export async function getCurrentUserFromToken(token: string | undefined) {
   if (!token) return null;
 
   const claims = await verifySessionToken(token);
@@ -63,6 +62,11 @@ export async function getCurrentUser() {
   }
 
   return user;
+}
+
+export async function getCurrentUser() {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  return getCurrentUserFromToken(token);
 }
 
 export async function requireUser() {

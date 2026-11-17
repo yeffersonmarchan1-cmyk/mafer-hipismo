@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { TicketReviewActions } from "@/app/admin/payments/ticket-review-actions";
+import { PaymentProofViewer } from "@/app/components/payment-proof-viewer";
 import { formatBs } from "@/lib/currency";
 import { formatVenezuelanPhone } from "@/lib/auth-validation";
 import { prisma } from "@/lib/prisma";
@@ -111,14 +112,10 @@ export default async function PaymentsAdminPage() {
                     {ticket.paymentProof?.paymentReference && <p className="mt-1 break-all text-[10px] text-slate-400">Referencia: {ticket.paymentProof.paymentReference}</p>}
                   </div>
                   {ticket.paymentProof?.storageKey && ticket.paymentProof.storageBucket ? (
-                    <Link
-                      className="shrink-0 rounded-lg border border-red-500/20 bg-red-500/[0.08] px-3 py-2 text-[10px] font-bold text-red-200 hover:bg-red-500/15"
-                      href={`/api/payment-proofs/${ticket.id}`}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      Ver comprobante ↗
-                    </Link>
+                    <PaymentProofViewer
+                      label="Ver comprobante"
+                      ticketId={ticket.id}
+                    />
                   ) : ticket.paymentProof?.paymentReference ? (
                     <span className="text-[10px] text-emerald-300">Referencia recibida</span>
                   ) : <span className="text-[10px] text-rose-300">Sin comprobante</span>}
