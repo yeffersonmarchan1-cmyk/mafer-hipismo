@@ -14,7 +14,7 @@ export default async function LandingPage() {
       <div className="relative mx-auto grid w-full max-w-6xl items-center gap-14 lg:grid-cols-[1.2fr_.8fr]">
         <section>
           <Link className="inline-flex items-center gap-3" href="/">
-            <BrandMark className="size-12 rounded-2xl shadow-lg shadow-red-950/40" size={48} />
+            <BrandMark className="size-12" size={48} />
             <span>
               <span className="block text-sm font-black tracking-[0.18em]">MAFER HIPISMO</span>
               <span className="mt-1 block text-[10px] font-semibold tracking-[0.25em] text-emerald-400">LA RINCONADA · CUADRO PERFECTO</span>

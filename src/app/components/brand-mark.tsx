@@ -12,7 +12,7 @@ export function BrandMark({
       alt=""
       className={className}
       height={size}
-      src="/pwa/brand-mark.svg"
+      src="/pwa/brand-mark.png"
       width={size}
     />
   );

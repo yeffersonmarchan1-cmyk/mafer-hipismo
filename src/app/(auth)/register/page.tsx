@@ -12,7 +12,7 @@ export default async function RegisterPage() {
     <main className="page-enter flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_50%_-20%,rgba(127,29,29,0.25),transparent_55%),#090a0f] px-4 py-10">
       <section className="w-full max-w-md">
         <Link className="mb-8 flex items-center justify-center gap-3" href="/">
-          <BrandMark className="size-11 rounded-xl shadow-lg shadow-red-950/40" size={44} />
+          <BrandMark className="size-11" size={44} />
           <span>
             <span className="block text-sm font-black tracking-[0.18em]">MAFER HIPISMO</span>
             <span className="mt-1 block text-center text-[9px] font-semibold tracking-[0.25em] text-emerald-400">LA RINCONADA · CUADRO PERFECTO</span>

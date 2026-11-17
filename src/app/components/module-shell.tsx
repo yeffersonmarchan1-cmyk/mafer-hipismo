@@ -35,7 +35,7 @@ export function ModuleShell({ children, fullName, role }: ModuleShellProps) {
     <div className="min-h-screen bg-[#090a0f] text-slate-100">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 flex-col border-r border-white/[0.07] bg-[#0d0e14] lg:flex">
         <Link className="flex items-center gap-3 border-b border-white/[0.07] px-6 py-6" href={role === "ADMIN" ? "/admin" : "/app"}>
-          <BrandMark className="size-11 rounded-xl shadow-lg shadow-red-950/40" size={44} />
+          <BrandMark className="size-11" size={44} />
           <span>
             <span className="block text-sm font-bold tracking-[0.14em]">MAFER</span>
             <span className="mt-0.5 block text-[10px] font-semibold tracking-[0.25em] text-red-400">
@@ -74,7 +74,7 @@ export function ModuleShell({ children, fullName, role }: ModuleShellProps) {
       <div className="min-h-screen lg:pl-72">
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-white/[0.07] bg-[#090a0f]/90 px-5 backdrop-blur-xl sm:px-8">
           <Link className="flex items-center gap-2.5 lg:hidden" href={role === "ADMIN" ? "/admin" : "/app"}>
-            <BrandMark className="size-8 rounded-lg" size={32} />
+            <BrandMark className="size-8" size={32} />
             <span className="text-xs font-bold tracking-[0.14em]">MAFER HIPISMO</span>
           </Link>
           <div className="hidden text-xs text-slate-500 sm:block">

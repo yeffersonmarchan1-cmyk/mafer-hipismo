@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BrandMark } from "@/app/components/brand-mark";
 
 type InstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -80,9 +81,12 @@ export function InstallAppButton() {
             role="dialog"
           >
             <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-300">MAFER Hipismo</p>
-                <h2 className="mt-2 text-lg font-bold text-white" id="install-title">Instala la app</h2>
+              <div className="flex items-center gap-3">
+                <BrandMark className="size-10" size={40} />
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-300">MAFER Hipismo</p>
+                  <h2 className="mt-2 text-lg font-bold text-white" id="install-title">Instala la app</h2>
+                </div>
               </div>
               <button
                 aria-label="Cerrar instrucciones"
