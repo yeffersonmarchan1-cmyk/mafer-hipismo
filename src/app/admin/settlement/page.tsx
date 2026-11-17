@@ -3,44 +3,75 @@ import { SettlementForm } from "@/app/admin/settlement/settlement-form";
 import { PrintButton } from "@/app/components/print-button";
 import { formatBs, formatBsFromCents } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import { raceDayVenueLabel } from "@/lib/race-day";
 
-export default async function SettlementAdminPage() {
+export default async function SettlementAdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ raceDayId?: string }>;
+}) {
   await connection();
-  const raceDay = await prisma.raceDay.findFirst({
+  const { raceDayId } = await searchParams;
+  const availableDays = await prisma.raceDay.findMany({
     where: { status: { in: ["CLOSED", "SETTLED"] } },
-    orderBy: { date: "desc" },
-    include: {
-      entries: {
-        where: { status: "ACTIVE" },
-        orderBy: [{ legNumber: "asc" }, { gazetteOrder: "asc" }],
-      },
-      winningSelections: true,
-      settlement: {
+    orderBy: [{ venue: "asc" }, { date: "desc" }],
+    select: { id: true, date: true, venue: true, status: true },
+  });
+  const raceDay = raceDayId
+    ? await prisma.raceDay.findFirst({
+        where: { id: raceDayId, status: { in: ["CLOSED", "SETTLED"] } },
         include: {
-          ticketPayouts: {
-            orderBy: { ticket: { ticketNumber: "asc" } },
+          entries: {
+            where: { status: "ACTIVE" },
+            orderBy: [{ legNumber: "asc" }, { gazetteOrder: "asc" }],
+          },
+          winningSelections: true,
+          settlement: {
             include: {
-              ticket: { include: { user: { select: { fullName: true } } } },
+              ticketPayouts: {
+                orderBy: { ticket: { ticketNumber: "asc" } },
+                include: {
+                  ticket: { include: { user: { select: { fullName: true } } } },
+                },
+              },
             },
           },
         },
-      },
-    },
-  });
+      })
+    : null;
 
   return (
     <section className="page-enter mx-auto max-w-4xl">
       <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-400">Módulo 03 · Administración</p>
       <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Resultados y liquidación</h1>
+      {availableDays.length > 0 && (
+        <section className="mt-5">
+          <h2 className="text-sm font-bold text-white">Elige una jornada por hipódromo</h2>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {availableDays.map((day) => (
+              <Link
+                className={`rounded-xl border p-3 transition ${raceDay?.id === day.id ? "border-emerald-400/30 bg-emerald-400/[0.06]" : "border-white/[0.08] bg-[#0d151a] hover:border-white/20"}`}
+                href={`/admin/settlement?raceDayId=${day.id}`}
+                key={day.id}
+              >
+                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">{raceDayVenueLabel(day.venue)}</p>
+                <p className="mt-1 text-xs text-white">{new Intl.DateTimeFormat("es-VE", { dateStyle: "long", timeZone: "UTC" }).format(day.date)}</p>
+                <p className="mt-1 text-[9px] uppercase text-slate-500">{day.status === "CLOSED" ? "Pendiente de liquidación" : "Finalizada"}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
       {!raceDay ? (
         <div className="mt-7 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center">
-          <p className="text-sm font-semibold text-white">No hay una jornada cerrada para liquidar</p>
-          <p className="mt-2 text-xs text-slate-500">Cierra las apuestas desde Jornadas e inscritos cuando corresponda.</p>
+          <p className="text-sm font-semibold text-white">{availableDays.length ? "Selecciona la jornada que vas a liquidar" : "No hay una jornada cerrada para liquidar"}</p>
+          <p className="mt-2 text-xs text-slate-500">Cada hipódromo mantiene sus propios cuadros, resultados y acumulados.</p>
         </div>
       ) : (
         <div className="mt-7 rounded-2xl border border-white/[0.08] bg-[#1a1d26] p-5 shadow-xl shadow-black/10 sm:p-7">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-red-400">
-            Jornada · {new Intl.DateTimeFormat("es-VE", { dateStyle: "long", timeZone: "UTC" }).format(raceDay.date)}
+            {raceDayVenueLabel(raceDay.venue)} · {new Intl.DateTimeFormat("es-VE", { dateStyle: "long", timeZone: "UTC" }).format(raceDay.date)}
           </p>
           {raceDay.settlement ? (
             <>

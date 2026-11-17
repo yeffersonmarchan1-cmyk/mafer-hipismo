@@ -3,6 +3,7 @@
 import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { normalizePhone } from "@/lib/auth-validation";
 import { formatBs } from "@/lib/currency";
@@ -49,6 +50,7 @@ export async function closeRaceDay(formData: FormData) {
     throw new Error("La jornada ya no está abierta o no existe.");
   }
   revalidateOperationalPages();
+  redirect(`/admin/jornadas/reporte?raceDayId=${encodeURIComponent(raceDayId)}&download=1`);
 }
 
 export async function deleteRaceDay(
@@ -524,7 +526,10 @@ export async function settleRaceDay(
             carryoverAmountVes: decimalFromCents(totalPoolCents),
             carryoverCents: totalPoolCents,
           },
-          update: {},
+          update: {
+            carryoverAmountVes: { increment: decimalFromCents(totalPoolCents) },
+            carryoverCents: { increment: totalPoolCents },
+          },
           select: {
             id: true,
             carryoverAmountVes: true,

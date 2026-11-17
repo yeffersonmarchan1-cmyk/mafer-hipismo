@@ -20,12 +20,14 @@ export function PlayCardSelector({
   carryoverAmount,
   horses,
   raceDayId,
+  venue,
   payment,
 }: {
   dateLabel: string;
   carryoverAmount: string;
   horses: Horse[];
   raceDayId: string;
+  venue: string;
   payment: {
     bank: string;
     cedula: string;
@@ -97,7 +99,7 @@ export function PlayCardSelector({
       <section className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/[0.08] bg-[#14151c] p-4 shadow-xl shadow-black/10 sm:px-5">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-            Jornada · La Rinconada
+            Jornada · {venue === "Valencia" ? "Hipódromo de Valencia" : "Hipódromo La Rinconada"}
           </p>
           <p className="mt-1 text-sm font-semibold text-white">{dateLabel}</p>
         </div>

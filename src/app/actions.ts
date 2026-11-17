@@ -9,6 +9,7 @@ import {
   extractPdfText,
   parseInscriptionText,
 } from "@/lib/inscriptions";
+import { isRaceDayVenue } from "@/lib/race-day";
 
 export type ImportState = {
   error?: string;
@@ -203,13 +204,15 @@ export async function createManualRaceDay(
   await requireAdmin();
   const dateValue = formData.get("raceDate");
   const firstRaceValue = formData.get("firstRaceAt");
+  const venue = formData.get("venue");
   if (
     typeof dateValue !== "string" ||
     !/^\d{4}-\d{2}-\d{2}$/.test(dateValue) ||
     typeof firstRaceValue !== "string" ||
-    !/^\d{2}:\d{2}$/.test(firstRaceValue)
+    !/^\d{2}:\d{2}$/.test(firstRaceValue) ||
+    !isRaceDayVenue(venue)
   ) {
-    return { error: "Indica una fecha y la hora de la primera válida." };
+    return { error: "Indica el hipódromo, la fecha y la hora de la primera válida." };
   }
   const date = new Date(`${dateValue}T12:00:00.000Z`);
   const firstRaceAt = new Date(`${dateValue}T${firstRaceValue}:00-04:00`);
@@ -222,7 +225,7 @@ export async function createManualRaceDay(
   }
 
   const existing = await prisma.raceDay.findUnique({
-    where: { date_venue: { date, venue: "La Rinconada" } },
+    where: { date_venue: { date, venue } },
     select: { status: true },
   });
   if (existing) {
@@ -237,7 +240,7 @@ export async function createManualRaceDay(
     await prisma.raceDay.create({
       data: {
         date,
-        venue: "La Rinconada",
+        venue,
         firstRaceAt,
         closesAt: new Date(firstRaceAt.getTime() - 30 * 60 * 1000),
         inscriptionSource: "Carga manual",
@@ -254,7 +257,7 @@ export async function createManualRaceDay(
     throw error;
   }
   revalidateHorseManagement();
-  return { success: "Jornada creada. Ya puedes cargar los ejemplares de sus seis válidas." };
+  return { success: `Jornada de ${venue} creada. Ya puedes cargar los ejemplares de sus seis válidas.` };
 }
 
 export async function importInscriptions(
@@ -270,6 +273,7 @@ export async function importInscriptions(
   let source: string;
   let date: Date;
   let firstRaceAt: Date;
+  let venue: string;
   try {
     const sourceUrl = formData.get("sourceUrl");
     const file = formData.get("file");
@@ -302,6 +306,11 @@ export async function importInscriptions(
     horses = parseInscriptionText(text);
     date = readDate(formData);
     firstRaceAt = readFirstRaceAt(formData, date);
+    const rawVenue = formData.get("venue");
+    if (!isRaceDayVenue(rawVenue)) {
+      return { error: "Selecciona un hipódromo válido." };
+    }
+    venue = rawVenue;
   } catch (error) {
     if (error instanceof Error) return { error: error.message };
     throw error;
@@ -310,7 +319,7 @@ export async function importInscriptions(
   try {
     await prisma.$transaction(async (transaction) => {
       const existing = await transaction.raceDay.findUnique({
-        where: { date_venue: { date, venue: "La Rinconada" } },
+        where: { date_venue: { date, venue } },
         select: { id: true, status: true },
       });
       if (existing?.status !== undefined && existing.status !== "OPEN") {
@@ -320,9 +329,10 @@ export async function importInscriptions(
       }
 
       const raceDay = await transaction.raceDay.upsert({
-        where: { date_venue: { date, venue: "La Rinconada" } },
+        where: { date_venue: { date, venue } },
         create: {
           date,
+          venue,
           firstRaceAt,
           closesAt: new Date(firstRaceAt.getTime() - 30 * 60 * 1000),
           inscriptionSource: source,

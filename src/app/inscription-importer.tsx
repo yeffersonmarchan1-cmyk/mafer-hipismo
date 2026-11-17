@@ -1,24 +1,57 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { importInscriptions, type ImportState } from "./actions";
+import { raceDayVenues } from "@/lib/race-day";
 
 const initialState: ImportState = {};
 
 export function InscriptionImporter({ initialDate }: { initialDate: string }) {
   const [state, action, pending] = useActionState(importInscriptions, initialState);
+  const [venue, setVenue] = useState<(typeof raceDayVenues)[number]>(raceDayVenues[0]);
+  const [raceDate, setRaceDate] = useState(initialDate);
 
   return (
     <form action={action} className="space-y-5">
+      <label className="block max-w-sm text-sm font-medium text-slate-200">
+        Hipódromo
+        <select
+          className="field mt-2"
+          name="venue"
+          onChange={(event) => {
+            const selectedVenue = raceDayVenues.find(
+              (item) => item === event.currentTarget.value,
+            );
+            if (!selectedVenue) return;
+            setVenue(selectedVenue);
+            setRaceDate(selectedVenue === "La Rinconada" ? initialDate : "");
+          }}
+          required
+          value={venue}
+        >
+          {raceDayVenues.map((venue) => (
+            <option key={venue} value={venue}>
+              {venue === "Valencia" ? "Hipódromo de Valencia" : "Hipódromo La Rinconada"}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <label className="block text-sm font-medium text-slate-200">
-        Fecha del domingo
+        Fecha de la jornada
         <input
           className="field mt-2"
           type="date"
           name="raceDate"
-          defaultValue={initialDate}
+          onChange={(event) => setRaceDate(event.currentTarget.value)}
+          value={raceDate}
           required
         />
+        {venue === "Valencia" && (
+          <span className="mt-1.5 block text-xs font-normal text-slate-500">
+            Indica la fecha oficial publicada para esta jornada de Valencia.
+          </span>
+        )}
       </label>
 
       <label className="block max-w-sm text-sm font-medium text-slate-200">

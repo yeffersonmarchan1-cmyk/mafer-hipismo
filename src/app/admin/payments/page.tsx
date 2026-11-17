@@ -1,21 +1,21 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { Prisma } from "@prisma/client";
 import { TicketReviewActions } from "@/app/admin/payments/ticket-review-actions";
 import { formatBs } from "@/lib/currency";
 import { formatVenezuelanPhone } from "@/lib/auth-validation";
 import { prisma } from "@/lib/prisma";
+import { raceDayVenueLabel } from "@/lib/race-day";
 
 export default async function PaymentsAdminPage() {
   await connection();
-  const [tickets, openDay] = await Promise.all([
+  const [tickets, openDays] = await Promise.all([
     prisma.ticket.findMany({
       where: { status: "PENDING" },
       orderBy: { submittedAt: "asc" },
       take: 100,
       include: {
         user: { select: { fullName: true, cedula: true, whatsappPhone: true } },
-        raceDay: { select: { date: true, status: true } },
+        raceDay: { select: { date: true, venue: true, status: true } },
         paymentProof: true,
         selections: {
           orderBy: [{ legNumber: "asc" }, { currentHorse: { gazetteOrder: "asc" } }],
@@ -25,23 +25,18 @@ export default async function PaymentsAdminPage() {
         },
       },
     }),
-    prisma.raceDay.findFirst({
+    prisma.raceDay.findMany({
       where: { status: { in: ["OPEN", "CLOSED"] } },
-      orderBy: { date: "desc" },
+      orderBy: [{ venue: "asc" }, { date: "desc" }],
       select: {
         id: true,
         date: true,
+        venue: true,
         carryoverAmountVes: true,
         tickets: { where: { status: "APPROVED" }, select: { amountVes: true } },
       },
     }),
   ]);
-  const approvedPool =
-    openDay?.tickets.reduce(
-      (total, ticket) => total.add(ticket.amountVes),
-      new Prisma.Decimal(0),
-    ) ?? new Prisma.Decimal(0);
-  const pool = approvedPool.add(openDay?.carryoverAmountVes ?? new Prisma.Decimal(0));
 
   return (
     <section className="page-enter mx-auto max-w-6xl">
@@ -49,26 +44,29 @@ export default async function PaymentsAdminPage() {
       <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Validación de pagos</h1>
       <p className="mt-2 text-sm text-slate-400">Revisa comprobantes y confirma cada ticket antes de sumarlo al pozo.</p>
 
-      <section className="mt-6 grid gap-3 sm:grid-cols-3">
+      <section className="mt-6 grid gap-3 sm:grid-cols-2">
         <article className="rounded-2xl border border-amber-400/15 bg-[#1a1d26] p-4">
           <p className="text-xs text-slate-500">Pendientes</p>
           <p className="mt-2 text-2xl font-black text-amber-200">{tickets.length}</p>
           <p className="mt-1 text-[10px] text-slate-500">Máximo 100 por página</p>
         </article>
-        <article className="rounded-2xl border border-red-500/15 bg-[#1a1d26] p-4">
-          <p className="text-xs text-slate-500">Pozo de jornada</p>
-          <p className="mt-2 text-2xl font-black tabular-nums text-red-300">{formatBs(pool.toFixed(2))}</p>
-          <p className="mt-1 text-[10px] text-slate-500">Incluye solo tickets aprobados</p>
-        </article>
-        <article className="rounded-2xl border border-white/[0.07] bg-[#1a1d26] p-4">
-          <p className="text-xs text-slate-500">Jornada</p>
-          <p className="mt-2 text-sm font-bold text-white">
-            {openDay
-              ? new Intl.DateTimeFormat("es-VE", { dateStyle: "long", timeZone: "UTC" }).format(openDay.date)
-              : "Sin jornada"}
-          </p>
-          {openDay && <Link className="mt-1 inline-block text-[10px] font-semibold text-red-300 hover:text-red-200" href="/admin/jornadas">Administrar jornada →</Link>}
-        </article>
+      </section>
+      <section className="mt-4 grid gap-3 sm:grid-cols-2">
+        {openDays.map((day) => {
+          const pool = day.tickets.reduce(
+            (total, ticket) => total.add(ticket.amountVes),
+            day.carryoverAmountVes,
+          );
+          return (
+            <article className="rounded-2xl border border-red-500/15 bg-[#1a1d26] p-4" key={day.id}>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">{raceDayVenueLabel(day.venue)}</p>
+              <p className="mt-1 text-xs text-slate-400">{new Intl.DateTimeFormat("es-VE", { dateStyle: "long", timeZone: "UTC" }).format(day.date)}</p>
+              <p className="mt-2 text-2xl font-black tabular-nums text-red-300">{formatBs(pool.toFixed(2))}</p>
+              <p className="mt-1 text-[10px] text-slate-500">Pozo: arrastre más pagos aprobados</p>
+              <Link className="mt-1 inline-block text-[10px] font-semibold text-red-300 hover:text-red-200" href="/admin/jornadas">Administrar jornadas →</Link>
+            </article>
+          );
+        })}
       </section>
 
       <div className="mt-6 space-y-4">
@@ -83,7 +81,7 @@ export default async function PaymentsAdminPage() {
               <div>
                 <p className="text-sm font-bold text-white">Ticket #{ticket.ticketNumber} · {ticket.user.fullName}</p>
                 <p className="mt-1 text-[10px] text-slate-500">
-                  C.I. {ticket.user.cedula} · WhatsApp {formatVenezuelanPhone(ticket.user.whatsappPhone)} · {new Intl.DateTimeFormat("es-VE", { dateStyle: "short", timeStyle: "short" }).format(ticket.submittedAt)}
+                  {raceDayVenueLabel(ticket.raceDay.venue)} · {new Intl.DateTimeFormat("es-VE", { dateStyle: "short", timeZone: "UTC" }).format(ticket.raceDay.date)} · C.I. {ticket.user.cedula} · WhatsApp {formatVenezuelanPhone(ticket.user.whatsappPhone)} · {new Intl.DateTimeFormat("es-VE", { dateStyle: "short", timeStyle: "short" }).format(ticket.submittedAt)}
                 </p>
               </div>
               <span className="rounded-full border border-amber-400/15 bg-amber-400/[0.07] px-3 py-1 text-[10px] font-bold text-amber-200">Pendiente</span>

@@ -11,6 +11,7 @@ import {
   updateHorse,
   type HorseManagementState,
 } from "@/app/actions";
+import { raceDayVenues } from "@/lib/race-day";
 
 type Horse = {
   id: string;
@@ -42,6 +43,8 @@ function ActionMessage({ state }: { state: HorseManagementState }) {
 
 export function ManualRaceDayCreator({ initialDate }: { initialDate: string }) {
   const [state, formAction, pending] = useActionState(createManualRaceDay, initialState);
+  const [venue, setVenue] = useState<(typeof raceDayVenues)[number]>(raceDayVenues[0]);
+  const [raceDate, setRaceDate] = useState(initialDate);
   return (
     <section className="rounded-2xl border border-red-500/15 bg-[#0d151a] p-5 sm:p-7">
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-300">Carga sin importador</p>
@@ -49,16 +52,46 @@ export function ManualRaceDayCreator({ initialDate }: { initialDate: string }) {
       <p className="mt-2 text-sm leading-6 text-slate-400">
         Programa la primera válida y luego carga cada carrera individualmente o pega sus inscritos.
       </p>
-      <form action={formAction} className="mt-5 grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+      <form action={formAction} className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:items-end">
+        <label className="text-xs font-medium text-slate-300">
+          Hipódromo
+          <select
+            className="field mt-2"
+            name="venue"
+            onChange={(event) => {
+              const selectedVenue = raceDayVenues.find(
+                (item) => item === event.currentTarget.value,
+              );
+              if (!selectedVenue) return;
+              setVenue(selectedVenue);
+              setRaceDate(selectedVenue === "La Rinconada" ? initialDate : "");
+            }}
+            required
+            value={venue}
+          >
+            {raceDayVenues.map((venue) => (
+              <option key={venue} value={venue}>
+                {venue === "Valencia" ? "Hipódromo de Valencia" : "Hipódromo La Rinconada"}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="text-xs font-medium text-slate-300">
           Fecha de la jornada
-          <input className="field mt-2" defaultValue={initialDate} name="raceDate" required type="date" />
+          <input
+            className="field mt-2"
+            name="raceDate"
+            onChange={(event) => setRaceDate(event.currentTarget.value)}
+            required
+            type="date"
+            value={raceDate}
+          />
         </label>
         <label className="text-xs font-medium text-slate-300">
           Primera válida (hora de Caracas)
           <input className="field mt-2" defaultValue="14:00" name="firstRaceAt" required type="time" />
         </label>
-        <button className="button-primary" disabled={pending} type="submit">
+        <button className="button-primary xl:col-span-1" disabled={pending} type="submit">
           {pending ? "Creando..." : "Crear jornada"}
         </button>
       </form>

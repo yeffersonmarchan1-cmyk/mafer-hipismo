@@ -4,6 +4,7 @@ import { formatBs } from "@/lib/currency";
 import { requireUser } from "@/lib/auth";
 import { formatVenezuelanPhone } from "@/lib/auth-validation";
 import { prisma } from "@/lib/prisma";
+import { raceDayVenueLabel } from "@/lib/race-day";
 
 const ticketStatus = {
   PENDING: "Pendiente de validación",
@@ -19,7 +20,7 @@ export default async function TicketsPage() {
     orderBy: { submittedAt: "desc" },
     take: 50,
     include: {
-      raceDay: { select: { date: true, status: true, closesAt: true } },
+      raceDay: { select: { date: true, venue: true, status: true, closesAt: true } },
       selections: {
         orderBy: [{ legNumber: "asc" }, { currentHorse: { gazetteOrder: "asc" } }],
         include: { currentHorse: { select: { saddlecloth: true, name: true, status: true } } },
@@ -54,6 +55,7 @@ export default async function TicketsPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">Ticket #{ticket.ticketNumber}</p>
+                <p className="mt-1 text-xs text-slate-400">{raceDayVenueLabel(ticket.raceDay.venue)}</p>
                 <p className="mt-1 text-xs text-slate-500">{new Intl.DateTimeFormat("es-VE", { dateStyle: "long", timeZone: "UTC" }).format(ticket.raceDay.date)}</p>
               </div>
               <span className={`rounded-full px-3 py-1.5 text-[10px] font-bold ${ticket.status === "APPROVED" ? "bg-green-400/10 text-green-300" : ticket.status === "REJECTED" ? "bg-rose-400/10 text-rose-300" : "bg-amber-400/10 text-amber-200"}`}>

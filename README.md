@@ -6,7 +6,7 @@ continúa disponible para generar el instalador Windows de escritorio.
 
 ## Módulos
 
-- **Jugador (`USER`)**: jugar al Cuadro Perfecto, consultar mis tickets y la pizarra oficial.
+- **Jugador (`USER`)**: elegir entre jornadas disponibles de La Rinconada o Valencia, jugar al Cuadro Perfecto, consultar mis tickets y la pizarra oficial.
 - **Administrador (`ADMIN`)**: jornadas e inscritos, validación de pagos,
   resultados/liquidación, configuración y usuarios.
 - Los datos del jugador y los tickets se leen en el servidor con el ID de la
@@ -57,8 +57,8 @@ Supabase).
 
 En despliegue web, configura todas esas variables en el proveedor de hosting;
 no las incluyas en el cliente ni en Git. La aplicación acepta comprobantes JPG,
-PNG o WebP de hasta 5 MB y genera enlaces firmados de dos minutos solo después
-de verificar que quien los solicita es su propietario o un administrador.
+PNG o WebP de hasta 5 MB y solo entrega las imágenes privadas tras verificar
+que quien las solicita es su propietario o un administrador.
 Los teléfonos de jugadores, Pago Móvil y administrador aceptan formato local
 venezolano, por ejemplo `0412 123 4567`, sin exigir el prefijo `+58`; se guardan
 normalizados internamente.
@@ -84,7 +84,11 @@ visitan, pero el cron permite cerrar la jornada aunque no haya usuarios activos.
 
 ## Inscritos
 
-El módulo `/admin/jornadas` permite importar PDFs con texto seleccionable,
+El módulo `/admin/jornadas` permite administrar jornadas independientes para
+La Rinconada y Valencia. La Rinconada suele programarse los domingos; para
+Valencia, selecciona la fecha publicada por el hipódromo. Los jugadores solo
+pueden elegir jornadas que administración haya abierto.
+El módulo permite importar PDFs con texto seleccionable,
 texto pegado y enlaces HTTPS de dominios autorizados en `IMPORT_ALLOWED_HOSTS`.
 Se conserva el orden original de la lista de Gaceta en cada válida. Los PDF
 escaneados necesitan OCR, que todavía no está incluido. Al importar configura
@@ -117,10 +121,15 @@ del jugador muestra gualdrapa y nombre de todos los ejemplares activos.
   ejemplar reemplaza las selecciones existentes por el siguiente ejemplar activo
   en el orden de Gaceta, con vuelta al inicio y registro de auditoría.
 - Al cerrar la jornada, la pizarra expone públicamente solo tickets aprobados.
+  Al cerrar manualmente una jornada, el sistema descarga un PDF administrativo
+  con los cuadros aprobados; también se puede descargar desde jornadas cerradas
+  por cron. El reporte separa el arrastre, la recaudación aprobada, la comisión
+  estimada del 10% y el 90% estimado para premios; una vez liquidados los
+  resultados muestra los importes reales.
   La liquidación considera exclusivamente seis aciertos, descuenta 10% y
   distribuye 90% en partes iguales por ticket ganador. Sin ganadores, el 100%
-  del pozo se traslada a la siguiente jornada. El reporte se puede imprimir o
-  guardar como PDF desde el navegador.
+  del pozo se traslada a la siguiente jornada del mismo hipódromo sin descontar
+  comisión. Los acumulados y arrastres se mantienen separados por hipódromo.
 - La jornada sigue las fases `Abierta` → `Cerrada / En curso` → `Finalizada`.
   Al cerrarse, la pizarra muestra tickets aprobados y acumulado; al liquidarse,
   muestra la combinación ganadora y los pagos. Las inscripciones pueden

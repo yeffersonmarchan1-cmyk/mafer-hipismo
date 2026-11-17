@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { raceDayVenueLabel } from "@/lib/race-day";
 
 const modules = [
   { href: "/admin/jornadas", label: "Jornadas e inscritos", detail: "Crear reuniones, importar Gaceta y administrar retirados.", icon: "01" },
@@ -12,27 +13,31 @@ const modules = [
 
 export default async function AdminDashboardPage() {
   await connection();
-  const [pendingPayments, openRaceDay] = await Promise.all([
+  const [pendingPayments, openRaceDays] = await Promise.all([
     prisma.ticket.count({ where: { status: "PENDING" } }),
-    prisma.raceDay.findFirst({
+    prisma.raceDay.findMany({
       where: { status: "OPEN" },
-      orderBy: { date: "asc" },
-      select: { date: true, entries: { select: { id: true } } },
+      orderBy: [{ venue: "asc" }, { date: "asc" }],
+      select: { id: true, date: true, venue: true, entries: { select: { id: true } } },
     }),
   ]);
 
   return (
     <div className="page-enter">
       <header className="mb-8">
-        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-400">Administración · La Rinconada</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-400">Administración · Hipódromos</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Centro de control</h1>
         <p className="mt-2 text-sm text-slate-400">Gestiona cada parte de MAFER Hipismo desde módulos independientes.</p>
       </header>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <article className="rounded-2xl border border-white/[0.07] bg-[#0d151a] p-5">
-          <p className="text-xs text-slate-500">Jornada abierta</p>
-          <p className="mt-3 text-lg font-bold text-white">{openRaceDay ? new Intl.DateTimeFormat("es-VE", { dateStyle: "long", timeZone: "UTC" }).format(openRaceDay.date) : "Sin jornada"}</p>
-          <p className="mt-1 text-xs text-slate-500">{openRaceDay?.entries.length ?? 0} ejemplares cargados</p>
+          <p className="text-xs text-slate-500">Jornadas abiertas</p>
+          {openRaceDays.length ? openRaceDays.map((day) => (
+            <p className="mt-2 text-xs font-semibold text-white" key={day.id}>
+              {raceDayVenueLabel(day.venue)} · {new Intl.DateTimeFormat("es-VE", { dateStyle: "short", timeZone: "UTC" }).format(day.date)}
+              <span className="ml-1 font-normal text-slate-500">({day.entries.length} ejemplares)</span>
+            </p>
+          )) : <p className="mt-3 text-lg font-bold text-white">Sin jornada</p>}
         </article>
         <article className="rounded-2xl border border-amber-400/10 bg-[#0d151a] p-5">
           <p className="text-xs text-slate-500">Pagos por revisar</p>

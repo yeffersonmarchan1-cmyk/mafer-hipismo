@@ -1,15 +1,28 @@
 import { connection } from "next/server";
+import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { closeDueRaceDays } from "@/lib/close-race-days";
 import { formatBs, formatBsFromCents } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
+import { raceDayVenueLabel } from "@/lib/race-day";
 
-export default async function OfficialBoardPage() {
+export default async function OfficialBoardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ raceDayId?: string }>;
+}) {
   await connection();
   await closeDueRaceDays();
-  const raceDay = await prisma.raceDay.findFirst({
-    orderBy: { date: "desc" },
-    include: {
+  const { raceDayId } = await searchParams;
+  const availableDays = await prisma.raceDay.findMany({
+    where: { status: { in: ["CLOSED", "SETTLED"] } },
+    orderBy: [{ venue: "asc" }, { date: "desc" }],
+    select: { id: true, date: true, venue: true },
+  });
+  const raceDay = raceDayId
+    ? await prisma.raceDay.findFirst({
+        where: { id: raceDayId, status: { in: ["CLOSED", "SETTLED"] } },
+        include: {
       entries: {
         select: { legNumber: true, saddlecloth: true, name: true },
       },
@@ -35,8 +48,9 @@ export default async function OfficialBoardPage() {
           },
         },
       },
-    },
-  });
+        },
+      })
+    : null;
   const totalPool = raceDay
     ? raceDay.tickets
         .reduce(
@@ -46,17 +60,28 @@ export default async function OfficialBoardPage() {
         .toFixed(2)
     : new Prisma.Decimal(0).toFixed(2);
 
-  if (!raceDay || raceDay.status === "OPEN") {
+  if (!raceDay) {
     return (
       <section className="page-enter mx-auto max-w-4xl">
         <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-400">Módulo 03 · Transparencia</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Pizarra oficial</h1>
-        <div className="mt-7 rounded-2xl border border-white/[0.08] bg-[#0d151a] p-6 sm:p-8">
-          <p className="font-semibold text-white">Apuestas abiertas</p>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
-            Los cuadros se harán públicos al cierre de apuestas. La jornada se cierra a la hora programada (30 minutos antes de la primera válida), o antes si administración lo hace manualmente.
-          </p>
-        </div>
+        <p className="mt-2 text-sm text-slate-400">Elige el hipódromo y la jornada cuya pizarra quieres consultar.</p>
+        {availableDays.length ? (
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            {availableDays.map((day) => (
+              <Link className="rounded-2xl border border-white/[0.08] bg-[#0d151a] p-4 hover:border-emerald-400/25" href={`/app/board?raceDayId=${day.id}`} key={day.id}>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">{raceDayVenueLabel(day.venue)}</p>
+                <p className="mt-2 text-sm font-semibold text-white">{new Intl.DateTimeFormat("es-VE", { dateStyle: "long", timeZone: "UTC" }).format(day.date)}</p>
+                <p className="mt-2 text-xs text-slate-400">Ver cuadros y acumulado →</p>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-7 rounded-2xl border border-white/[0.08] bg-[#0d151a] p-6 sm:p-8">
+            <p className="font-semibold text-white">No hay jornadas cerradas</p>
+            <p className="mt-2 text-sm leading-6 text-slate-400">Las pizarras se publican al cerrar las apuestas de cada hipódromo.</p>
+          </div>
+        )}
       </section>
     );
   }
@@ -66,8 +91,21 @@ export default async function OfficialBoardPage() {
       <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-400">Módulo 03 · Transparencia</p>
       <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Pizarra oficial</h1>
       <p className="mt-2 text-sm text-slate-400">
-        Jornada {new Intl.DateTimeFormat("es-VE", { dateStyle: "long", timeZone: "UTC" }).format(raceDay.date)}
+        {raceDayVenueLabel(raceDay.venue)} · {new Intl.DateTimeFormat("es-VE", { dateStyle: "long", timeZone: "UTC" }).format(raceDay.date)}
       </p>
+      {availableDays.length > 1 && (
+        <nav aria-label="Cambiar jornada de la pizarra" className="mt-4 flex flex-wrap gap-2">
+          {availableDays.map((day) => (
+            <Link
+              className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold ${day.id === raceDay.id ? "border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-200" : "border-white/[0.08] text-slate-400 hover:text-white"}`}
+              href={`/app/board?raceDayId=${day.id}`}
+              key={day.id}
+            >
+              {raceDayVenueLabel(day.venue)} · {new Intl.DateTimeFormat("es-VE", { dateStyle: "short", timeZone: "UTC" }).format(day.date)}
+            </Link>
+          ))}
+        </nav>
+      )}
       <section className="mt-6 rounded-2xl border border-red-500/15 bg-[#0d151a] p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
