@@ -7,6 +7,11 @@ import { deletePaymentProof, uploadPaymentProof } from "@/lib/payment-storage";
 import { recordOperationalAlert } from "@/lib/operational-alerts";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/auth-validation";
+import {
+  TICKET_MINIMUM_AMOUNT_CENTS,
+  TICKET_MINIMUM_AMOUNT_MESSAGE,
+  TICKET_PRICE_PER_COMBINATION_CENTS,
+} from "@/lib/ticket-pricing";
 
 export type TicketSubmissionState = {
   error?: string;
@@ -124,6 +129,18 @@ export async function submitTicket(
     }
   }
 
+  const combinations = selectionsByLeg.reduce(
+    (total, leg) => total * BigInt(leg.length),
+    BigInt(1),
+  );
+  const amountVesCents = combinations * TICKET_PRICE_PER_COMBINATION_CENTS;
+  if (amountVesCents < TICKET_MINIMUM_AMOUNT_CENTS) {
+    return { error: TICKET_MINIMUM_AMOUNT_MESSAGE };
+  }
+  if (amountVesCents > BigInt("999999999999999999")) {
+    return { error: "El importe de esta combinación supera el máximo permitido." };
+  }
+
   const config = await prisma.systemConfig.findUnique({ where: { id: 1 } });
   if (
     !config ||
@@ -148,24 +165,6 @@ export async function submitTicket(
       if (error instanceof Error) return { error: error.message };
       throw error;
     }
-  }
-
-  const combinations = selectionsByLeg.reduce(
-    (total, leg) => total * BigInt(leg.length),
-    BigInt(1),
-  );
-  const amountVesCents = combinations * BigInt(500);
-  if (amountVesCents > BigInt("999999999999999999")) {
-    if (uploaded) {
-      try {
-        await deletePaymentProof(uploaded.bucket, uploaded.key);
-      } catch (cleanupError) {
-        throw new Error(
-          `El importe de la jugada supera el límite permitido y no se pudo eliminar el archivo temporal: ${cleanupError instanceof Error ? cleanupError.message : "error desconocido"}`,
-        );
-      }
-    }
-    return { error: "El importe de esta combinación supera el máximo permitido." };
   }
 
   const createdAt = new Date();

@@ -4,6 +4,11 @@ import { useActionState, useMemo, useState } from "react";
 import { submitTicket, type TicketSubmissionState } from "@/app/app/play/actions";
 import { formatBs, formatBsFromCents } from "@/lib/currency";
 import { formatVenezuelanPhone } from "@/lib/auth-validation";
+import {
+  TICKET_MINIMUM_AMOUNT_CENTS,
+  TICKET_MINIMUM_AMOUNT_MESSAGE,
+  TICKET_PRICE_PER_COMBINATION_CENTS,
+} from "@/lib/ticket-pricing";
 
 type Horse = {
   id: string;
@@ -58,12 +63,14 @@ export function PlayCardSelector({
   const combinations = counts.some((count) => count === 0)
     ? BigInt(0)
     : counts.reduce((total, count) => total * BigInt(count), BigInt(1));
-  const amountCents = combinations * BigInt(500);
+  const amountCents = combinations * TICKET_PRICE_PER_COMBINATION_CENTS;
   const activeHorses = horses
     .filter((horse) => horse.legNumber === activeLeg)
     .sort((a, b) => a.gazetteOrder - b.gazetteOrder);
   const selectedCount = counts.reduce((total, count) => total + count, 0);
   const canSubmit = counts.every((count) => count > 0);
+  const belowMinimum =
+    canSubmit && amountCents < TICKET_MINIMUM_AMOUNT_CENTS;
 
   function toggleHorse(id: string) {
     setSelectedIds((previous) => {
@@ -356,10 +363,18 @@ export function PlayCardSelector({
                 {formatBsFromCents(amountCents)}
               </span>
             </div>
+            {belowMinimum && (
+              <p
+                className="mt-1 text-[10px] leading-4 text-amber-300"
+                role="alert"
+              >
+                {TICKET_MINIMUM_AMOUNT_MESSAGE}
+              </p>
+            )}
           </div>
           <button
             className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-500 to-red-700 px-4 text-xs font-extrabold text-white shadow-lg shadow-red-950/30 transition hover:-translate-y-0.5 hover:shadow-red-900/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none sm:px-5 sm:text-sm"
-            disabled={!canSubmit || pending}
+            disabled={!canSubmit || belowMinimum || pending}
             type="submit"
           >
             {pending && <span aria-hidden="true" className="spinner" />}
