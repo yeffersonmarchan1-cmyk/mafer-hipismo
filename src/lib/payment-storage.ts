@@ -149,17 +149,13 @@ export async function deletePaymentProof(bucket: string, key: string) {
   }
 }
 
-export async function createPaymentProofUrl(bucket: string, key: string) {
-  const { baseUrl, client } = createStorageClient();
-  const { data, error } = await client.storage.from(bucket).createSignedUrl(key, 120);
+export async function downloadPaymentProof(bucket: string, key: string) {
+  const { client } = createStorageClient();
+  const { data, error } = await client.storage.from(bucket).download(key);
   if (error) {
-    throw new Error(`No se pudo generar un enlace temporal al comprobante: ${error.message}`);
+    throw new Error(`Supabase Storage no pudo leer el comprobante: ${error.message}`);
   }
-  const signedUrl = new URL(data.signedUrl, `${baseUrl}/`);
-  if (signedUrl.origin !== new URL(baseUrl).origin) {
-    throw new Error("Supabase Storage devolvió un enlace a un dominio inesperado.");
-  }
-  return signedUrl.toString();
+  return data;
 }
 
 export const paymentProofMaxBytes = maximumProofSize;

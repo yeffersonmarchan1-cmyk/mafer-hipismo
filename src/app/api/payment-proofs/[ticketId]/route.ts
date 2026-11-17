@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { createPaymentProofUrl } from "@/lib/payment-storage";
+import { downloadPaymentProof } from "@/lib/payment-storage";
 import { prisma } from "@/lib/prisma";
+
+const allowedContentTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export async function GET(
   _request: NextRequest,
@@ -17,6 +19,7 @@ export async function GET(
     select: {
       storageBucket: true,
       storageKey: true,
+      contentType: true,
       ticket: { select: { userId: true } },
     },
   });
@@ -30,17 +33,31 @@ export async function GET(
   }
 
   try {
-    const signedUrl = await createPaymentProofUrl(
+    const image = await downloadPaymentProof(
       proof.storageBucket,
       proof.storageKey,
     );
-    return NextResponse.redirect(signedUrl, {
-      headers: { "Cache-Control": "private, no-store" },
+    const contentType = proof.contentType ?? image.type;
+    if (!allowedContentTypes.has(contentType)) {
+      return NextResponse.json(
+        { error: "El comprobante no tiene un formato de imagen permitido." },
+        { status: 415 },
+      );
+    }
+    return new NextResponse(image, {
+      headers: {
+        "Cache-Control": "private, no-store",
+        "Content-Type": contentType,
+        "Content-Disposition": "inline",
+        "X-Content-Type-Options": "nosniff",
+      },
     });
   } catch (error) {
-    console.error("Could not sign payment proof URL:", error);
+    console.error("Could not load payment proof:", error);
     return NextResponse.json(
-      { error: "No se pudo abrir el comprobante." },
+      {
+        error: error instanceof Error ? error.message : "No se pudo abrir el comprobante.",
+      },
       { status: 503 },
     );
   }
