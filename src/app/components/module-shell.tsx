@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { logout } from "@/app/actions/auth";
+import { InstallAppButton } from "@/app/components/install-app-button";
 import { ModuleNavigation } from "@/app/components/module-navigation";
 
 type ModuleShellProps = {
@@ -79,7 +80,10 @@ export function ModuleShell({ children, fullName, role }: ModuleShellProps) {
             LA RINCONADA <span className="mx-2 text-slate-700">/</span>
             <span className="text-slate-300">{role === "ADMIN" ? "CENTRO DE CONTROL" : "5Y6"}</span>
           </div>
-          <div className="ml-auto flex items-center gap-2 rounded-full border border-green-900/60 bg-green-950/30 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-green-300">
+          <div className="ml-auto">
+            <InstallAppButton />
+          </div>
+          <div className="hidden items-center gap-2 rounded-full border border-green-900/60 bg-green-950/30 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-green-300 sm:flex">
             <span className="size-1.5 animate-pulse rounded-full bg-green-400" />
             En línea
           </div>

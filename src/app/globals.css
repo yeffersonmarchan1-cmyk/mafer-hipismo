@@ -202,6 +202,12 @@ select {
   }
 }
 
+@media (display-mode: standalone) {
+  .pwa-install-control {
+    display: none !important;
+  }
+}
+
 @media print {
   body {
     background: white !important;

@@ -128,3 +128,12 @@ npm run build:desktop
 El `.exe` se genera en `release`. La aplicación de escritorio lee
 `DATABASE_URL` y `AUTH_SECRET` del entorno del usuario de Windows y necesita
 internet para conectarse a PostgreSQL.
+
+## Instalar en teléfonos
+
+La aplicación incluye un manifiesto PWA y sus iconos de instalación. Al
+publicarla en un dominio HTTPS, el navegador compatible ofrece instalar
+**MAFER Hipismo** desde el botón **Instalar app** de la portada o del panel. En
+iPhone/iPad se muestran las instrucciones para Safari: **Compartir → Agregar a
+pantalla de inicio**. La PWA usa modo de ventana independiente; sigue siendo una
+aplicación en línea y necesita internet para autenticación, jornadas y jugadas.

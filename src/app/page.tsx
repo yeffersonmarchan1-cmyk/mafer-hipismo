@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { InstallAppButton } from "@/app/components/install-app-button";
 import { getCurrentUser } from "@/lib/auth";
 
 export default async function LandingPage() {
@@ -31,6 +32,7 @@ export default async function LandingPage() {
             Arma tu cuadro, envía tu pago móvil y sigue cada jornada con información oficial y transparencia.
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
+            <InstallAppButton />
             <Link className="inline-flex min-h-12 items-center justify-center rounded-xl bg-emerald-400 px-6 text-sm font-extrabold text-white shadow-lg shadow-red-950/30 transition hover:-translate-y-0.5 hover:bg-emerald-300 hover:shadow-red-900/30" href="/login">Iniciar sesión</Link>
             <Link className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-6 text-sm font-semibold text-slate-200 transition hover:border-white/20 hover:bg-white/[0.06]" href="/register">Crear cuenta</Link>
           </div>
