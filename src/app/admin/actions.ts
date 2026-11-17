@@ -70,7 +70,14 @@ export async function deleteRaceDay(
         select: {
           id: true,
           settlement: {
-            select: { id: true, totalPoolCents: true, totalPoolVes: true, isCarryover: true },
+            select: {
+              id: true,
+              totalPoolCents: true,
+              totalPoolVes: true,
+              distributableCents: true,
+              distributableVes: true,
+              isCarryover: true,
+            },
           },
           rolloverTo: {
             select: { id: true, carryoverAmountVes: true, carryoverCents: true },
@@ -87,12 +94,20 @@ export async function deleteRaceDay(
       if (!day) return "NOT_FOUND" as const;
 
       if (day.rolloverTo && day.settlement?.isCarryover) {
+        const carriedAmount =
+          day.settlement.distributableVes.gt(0)
+            ? day.settlement.distributableVes
+            : day.settlement.totalPoolVes;
+        const carriedCents =
+          day.settlement.distributableCents > BigInt(0)
+            ? day.settlement.distributableCents
+            : day.settlement.totalPoolCents;
         const remainingCarryover = Prisma.Decimal.max(
           new Prisma.Decimal(0),
-          day.rolloverTo.carryoverAmountVes.minus(day.settlement.totalPoolVes),
+          day.rolloverTo.carryoverAmountVes.minus(carriedAmount),
         );
         const remainingCarryoverCents =
-          day.rolloverTo.carryoverCents - day.settlement.totalPoolCents;
+          day.rolloverTo.carryoverCents - carriedCents;
         await transaction.raceDay.update({
           where: { id: day.rolloverTo.id },
           data: {
@@ -429,10 +444,8 @@ export async function settleRaceDay(
       ),
     );
     const winnerCount = winningTickets.length;
-    const commissionCents =
-      winnerCount === 0 ? BigInt(0) : totalPoolCents / BigInt(10);
-    const distributableCents =
-      winnerCount === 0 ? BigInt(0) : totalPoolCents - commissionCents;
+    const commissionCents = totalPoolCents / BigInt(10);
+    const distributableCents = totalPoolCents - commissionCents;
     const payoutEachCents =
       winnerCount === 0
         ? BigInt(0)
@@ -469,7 +482,7 @@ export async function settleRaceDay(
       });
       if (rolloverDay) {
         const newCarryoverCents =
-          toCents(rolloverDay.carryoverAmountVes) + totalPoolCents;
+          toCents(rolloverDay.carryoverAmountVes) + distributableCents;
         if (newCarryoverCents > maximumPoolCents) {
           return { kind: "POOL_TOO_LARGE" as const };
         }
@@ -523,12 +536,12 @@ export async function settleRaceDay(
             date: createRolloverDate!,
             venue: day.venue,
             rolloverFromId: day.id,
-            carryoverAmountVes: decimalFromCents(totalPoolCents),
-            carryoverCents: totalPoolCents,
+            carryoverAmountVes: decimalFromCents(distributableCents),
+            carryoverCents: distributableCents,
           },
           update: {
-            carryoverAmountVes: { increment: decimalFromCents(totalPoolCents) },
-            carryoverCents: { increment: totalPoolCents },
+            carryoverAmountVes: { increment: decimalFromCents(distributableCents) },
+            carryoverCents: { increment: distributableCents },
           },
           select: {
             id: true,
@@ -539,11 +552,11 @@ export async function settleRaceDay(
         }));
       if (rolloverDay) {
         const newCarryoverCents =
-          toCents(targetDay.carryoverAmountVes) + totalPoolCents;
+          toCents(targetDay.carryoverAmountVes) + distributableCents;
         await transaction.raceDay.update({
           where: { id: targetDay.id },
           data: {
-            carryoverAmountVes: { increment: decimalFromCents(totalPoolCents) },
+            carryoverAmountVes: { increment: decimalFromCents(distributableCents) },
             carryoverCents: newCarryoverCents,
             ...(targetDay.rolloverFromId ? {} : { rolloverFromId: day.id }),
           },
@@ -583,7 +596,7 @@ export async function settleRaceDay(
   revalidateOperationalPages();
   return result.winnerCount === 0
     ? {
-        success: `Jornada desierta. El pozo de ${formatBs(decimalFromCents(result.totalPoolCents).toFixed(2))} pasó a la siguiente jornada.`,
+        success: `Jornada desierta. Se retuvo ${formatBs(decimalFromCents(result.commissionCents).toFixed(2))} de comisión logística; ${formatBs(decimalFromCents(result.distributableCents).toFixed(2))} se acumularon para la siguiente jornada.`,
       }
     : {
         success: `Liquidación completada: ${result.winnerCount} cuadro(s), ${formatBs(decimalFromCents(result.payoutEachCents).toFixed(2))} por ticket ganador y comisión de ${formatBs(decimalFromCents(result.commissionCents).toFixed(2))}.`,

@@ -81,10 +81,18 @@ export default async function SettlementAdminPage({
                 </h2>
                 <PrintButton />
               </div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <Summary label="Pozo total" value={formatBs(raceDay.settlement.totalPoolVes.toFixed(2))} />
                 <Summary label="Comisión · 10%" value={formatBs(raceDay.settlement.commissionVes.toFixed(2))} />
                 <Summary label="Ganadores" value={String(raceDay.settlement.winnerCount)} />
+                <Summary
+                  label={raceDay.settlement.isCarryover ? "Arrastre neto" : "Pozo a repartir"}
+                  value={formatBs(
+                    raceDay.settlement.distributableVes.gt(0)
+                      ? raceDay.settlement.distributableVes.toFixed(2)
+                      : raceDay.settlement.totalPoolVes.toFixed(2),
+                  )}
+                />
               </div>
               <div className="mt-5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Combinación ganadora</p>
@@ -103,7 +111,7 @@ export default async function SettlementAdminPage({
               </div>
               {raceDay.settlement.isCarryover ? (
                 <p className="mt-4 rounded-xl border border-amber-400/15 bg-amber-400/[0.06] p-4 text-xs leading-5 text-amber-100">
-                  No hubo cuadros con seis aciertos. El pozo completo se trasladó a la siguiente jornada.
+                  No hubo cuadros con seis aciertos. Se retuvo la comisión logística del 10% y el saldo restante se trasladó a la siguiente jornada.
                 </p>
               ) : (
                 <div className="mt-5">

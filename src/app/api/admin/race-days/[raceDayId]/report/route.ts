@@ -133,12 +133,12 @@ export async function GET(
     `Pozo total (arrastre + aprobados): ${formatBsFromCents(totalPoolCents)}`,
     settlement
       ? `Comision liquidada: ${formatBsFromCents(settlement.commissionCents)}`
-      : `Comision estimada 10% si hay ganadores: ${formatBsFromCents(estimatedCommissionCents)}`,
+      : `Comision logistica estimada 10%: ${formatBsFromCents(estimatedCommissionCents)}`,
     settlement
       ? settlement.isCarryover
-        ? `Arrastre integro a la proxima jornada del mismo hipodromo: ${formatBsFromCents(totalPoolCents)}`
+        ? `Arrastre neto a la proxima jornada del mismo hipodromo: ${formatBsFromCents(settlement.distributableCents > BigInt(0) ? settlement.distributableCents : totalPoolCents)}`
         : `Premios distribuidos: ${formatBsFromCents(settlement.distributableCents)} (${settlement.winnerCount} tickets ganadores)`
-      : `Premio estimado 90% si hay ganadores: ${formatBsFromCents(estimatedPrizeCents)}`,
+      : `Premio o arrastre estimado 90%: ${formatBsFromCents(estimatedPrizeCents)}`,
     `Tickets aprobados: ${raceDay.tickets.length} | Recaudacion aprobada: ${formatBsFromCents(approvedCents)}`,
   ];
   for (const line of summary) {
@@ -148,7 +148,7 @@ export async function GET(
   if (!settlement) {
     drawText(
       page,
-      "Si no hay ganadores, el 100% del pozo pasa a la siguiente jornada del mismo hipodromo sin descontar comision.",
+      "Se retiene el 10% como comision logistica; el 90% restante se reparte entre ganadores o pasa como arrastre si no hay ganadores.",
       margin,
       y,
       regular,

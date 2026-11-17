@@ -149,12 +149,22 @@ export default async function OfficialBoardPage({
           </div>
           {raceDay.settlement.isCarryover ? (
             <p className="mt-4 text-sm text-amber-100">
-              No hubo cuadros con seis aciertos. El pozo completo se trasladó a la próxima jornada.
+              No hubo cuadros con seis aciertos. Comisión logística retenida:{" "}
+              <strong>{formatBs(raceDay.settlement.commissionVes.toFixed(2))}</strong>.
+              Saldo acumulado para la próxima jornada:{" "}
+              <strong>
+                {formatBs(
+                  raceDay.settlement.distributableVes.gt(0)
+                    ? raceDay.settlement.distributableVes.toFixed(2)
+                    : totalPool,
+                )}
+              </strong>.
             </p>
           ) : (
             <>
               <p className="mt-4 text-sm text-slate-300">
                 Pozo repartido: <strong className="text-white">{formatBs(raceDay.settlement.distributableVes.toFixed(2))}</strong>
+                {" · "}Comisión logística 10%: <strong className="text-white">{formatBs(raceDay.settlement.commissionVes.toFixed(2))}</strong>
                 {" · "}Premio por cuadro: <strong className="text-green-300">{formatBsFromCents(raceDay.settlement.payoutEachCents)}</strong>
               </p>
               <div className="mt-4 divide-y divide-white/[0.06] rounded-xl border border-white/[0.06]">

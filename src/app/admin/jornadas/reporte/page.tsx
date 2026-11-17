@@ -100,23 +100,27 @@ export default async function RaceDayReportPage({
             <>
               <Summary label="Comisión liquidada" value={formatBsFromCents(actualSettlement.commissionCents)} />
               <Summary
-                label={actualSettlement.isCarryover ? "Arrastre íntegro · jornada desierta" : "Premios distribuidos"}
-                value={formatBsFromCents(actualSettlement.isCarryover ? totalPoolCents : actualSettlement.distributableCents)}
+                label={actualSettlement.isCarryover ? "Arrastre neto · jornada desierta" : "Premios distribuidos"}
+                value={formatBsFromCents(
+                  actualSettlement.isCarryover && actualSettlement.distributableCents === BigInt(0)
+                    ? totalPoolCents
+                    : actualSettlement.distributableCents,
+                )}
               />
             </>
           ) : (
             <>
-              <Summary label="Comisión estimada · 10% si hay ganadores" value={formatBsFromCents(estimatedCommissionCents)} />
-              <Summary label="Premio estimado · 90% si hay ganadores" value={formatBsFromCents(estimatedDistributableCents)} />
+              <Summary label="Comisión logística estimada · 10%" value={formatBsFromCents(estimatedCommissionCents)} />
+              <Summary label="Premio o arrastre estimado · 90%" value={formatBsFromCents(estimatedDistributableCents)} />
             </>
           )}
         </section>
         <p className="mt-3 text-xs leading-5 text-slate-600">
           {actualSettlement?.isCarryover
-            ? "No hubo tickets ganadores: el 100% del pozo se conserva como arrastre para la próxima jornada de este mismo hipódromo, sin descontar comisión."
+            ? `No hubo tickets ganadores: se retuvo ${formatBsFromCents(actualSettlement.commissionCents)} de comisión logística y ${formatBsFromCents(actualSettlement.distributableCents === BigInt(0) ? totalPoolCents : actualSettlement.distributableCents)} queda como arrastre para la próxima jornada de este mismo hipódromo.`
             : actualSettlement
               ? `Resultado liquidado con ${actualSettlement.winnerCount} ticket(s) ganador(es).`
-              : "Montos netos estimados hasta registrar los resultados oficiales. Si no hay ganadores, el 100% del pozo pasa a la próxima jornada del mismo hipódromo, sin descontar comisión."}
+              : "Al liquidar se retendrá el 10% como comisión logística. El 90% restante se repartirá entre los ganadores o, si no hay ganadores, pasará como arrastre a la próxima jornada del mismo hipódromo."}
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <Summary label="Cuadros aprobados" value={String(raceDay.tickets.length)} />

@@ -127,9 +127,11 @@ del jugador muestra gualdrapa y nombre de todos los ejemplares activos.
   estimada del 10% y el 90% estimado para premios; una vez liquidados los
   resultados muestra los importes reales.
   La liquidación considera exclusivamente seis aciertos, descuenta 10% y
-  distribuye 90% en partes iguales por ticket ganador. Sin ganadores, el 100%
-  del pozo se traslada a la siguiente jornada del mismo hipódromo sin descontar
-  comisión. Los acumulados y arrastres se mantienen separados por hipódromo.
+  distribuye 90% en partes iguales por ticket ganador. Sin ganadores, se retiene
+  igualmente el 10% como comisión logística y el 90% restante se traslada como
+  acumulado a la siguiente jornada del mismo hipódromo; en esa jornada se vuelve
+  a calcular la comisión sobre el pozo total. Los acumulados y arrastres se
+  mantienen separados por hipódromo.
 - La jornada sigue las fases `Abierta` → `Cerrada / En curso` → `Finalizada`.
   Al cerrarse, la pizarra muestra tickets aprobados y acumulado; al liquidarse,
   muestra la combinación ganadora y los pagos. Las inscripciones pueden
