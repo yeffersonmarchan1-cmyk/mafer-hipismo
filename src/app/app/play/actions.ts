@@ -213,6 +213,7 @@ export async function submitTicket(
                 raceDayId,
                 userId: user.id,
                 combinations,
+                selectedHorseCount: chosenIds.length,
                 amountVes: decimalFromCents(amountVesCents),
                 submittedAt: createdAt,
                 selections: {

@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import Link from "next/link";
 import { formatBs } from "@/lib/currency";
 import { requireUser } from "@/lib/auth";
 import { formatVenezuelanPhone } from "@/lib/auth-validation";
@@ -18,7 +19,7 @@ export default async function TicketsPage() {
     orderBy: { submittedAt: "desc" },
     take: 50,
     include: {
-      raceDay: { select: { date: true } },
+      raceDay: { select: { date: true, status: true, closesAt: true } },
       selections: {
         orderBy: [{ legNumber: "asc" }, { currentHorse: { gazetteOrder: "asc" } }],
         include: { currentHorse: { select: { saddlecloth: true, name: true, status: true } } },
@@ -83,16 +84,27 @@ export default async function TicketsPage() {
               <p className="text-[10px] text-slate-500">
                 Importe: {formatBs(ticket.amountVes.toFixed(2))}
               </p>
-              {ticket.paymentProof?.storageKey && ticket.paymentProof.storageBucket && (
-                <a
-                  className="text-[10px] font-semibold text-red-300 underline decoration-red-500/30 underline-offset-4 hover:text-red-200"
-                  href={`/api/payment-proofs/${ticket.id}`}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  Ver mi comprobante
-                </a>
-              )}
+              <div className="flex flex-wrap items-center gap-4">
+                {ticket.raceDay.status === "OPEN" &&
+                  (!ticket.raceDay.closesAt || ticket.raceDay.closesAt > new Date()) && (
+                    <Link
+                      className="text-[10px] font-semibold text-emerald-300 underline decoration-emerald-500/30 underline-offset-4 hover:text-emerald-200"
+                      href={`/app/tickets/${ticket.id}/edit`}
+                    >
+                      Editar Jugada
+                    </Link>
+                  )}
+                {ticket.paymentProof?.storageKey && ticket.paymentProof.storageBucket && (
+                  <a
+                    className="text-[10px] font-semibold text-red-300 underline decoration-red-500/30 underline-offset-4 hover:text-red-200"
+                    href={`/api/payment-proofs/${ticket.id}`}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Ver mi comprobante
+                  </a>
+                )}
+              </div>
             </div>
           </article>
         ))}
