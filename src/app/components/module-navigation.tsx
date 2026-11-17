@@ -2,19 +2,39 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { LucideIcon } from "lucide-react";
+import {
+  BadgeCheck,
+  CalendarDays,
+  ClipboardList,
+  Settings,
+  Shield,
+  Ticket,
+  Trophy,
+  Users,
+} from "lucide-react";
+
+const navigationIcons = {
+  "badge-check": BadgeCheck,
+  calendar: CalendarDays,
+  clipboard: ClipboardList,
+  settings: Settings,
+  shield: Shield,
+  ticket: Ticket,
+  trophy: Trophy,
+  users: Users,
+};
 
 type Module = {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: keyof typeof navigationIcons;
 };
 
 export function ModuleNavigation({
   modules,
   mobile = false,
 }: {
-  modules: Module[];
+  modules: readonly Module[];
   mobile?: boolean;
 }) {
   const pathname = usePathname();
@@ -32,6 +52,7 @@ export function ModuleNavigation({
         const active =
           pathname === module.href ||
           (module.href !== "/admin" && pathname.startsWith(`${module.href}/`));
+        const Icon = navigationIcons[module.icon];
 
         return (
           <Link
@@ -52,7 +73,7 @@ export function ModuleNavigation({
             href={module.href}
             key={module.href}
           >
-            <module.icon
+            <Icon
               aria-hidden="true"
               className={
                 mobile
