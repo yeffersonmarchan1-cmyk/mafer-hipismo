@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createClient } from "@supabase/supabase-js";
+
 const defaultBucket = "payment-proofs";
 const maximumProofSize = 5 * 1024 * 1024;
 const allowedTypes = new Map([
@@ -37,67 +39,44 @@ function storageCredentials() {
   return { baseUrl: url.origin, serviceRoleKey };
 }
 
-function storagePath(bucket: string, key: string) {
-  return [bucket, ...key.split("/")].map(encodeURIComponent).join("/");
-}
-
-function headers(serviceRoleKey: string, contentType?: string) {
+function createStorageClient() {
+  const { baseUrl, serviceRoleKey } = storageCredentials();
   return {
-    apikey: serviceRoleKey,
-    Authorization: `Bearer ${serviceRoleKey}`,
-    ...(contentType ? { "Content-Type": contentType } : {}),
+    baseUrl,
+    client: createClient(baseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
+    }),
   };
 }
 
-async function assertPrivateBucket(response: Response) {
-  if (!response.ok) {
-    throw new Error("No se pudo verificar el bucket de comprobantes en Supabase Storage.");
-  }
-  const bucket: unknown = await response.json();
-  if (!bucket || typeof bucket !== "object" || !("public" in bucket) || bucket.public !== false) {
-    throw new Error("El bucket de comprobantes existe, pero no está configurado como privado.");
-  }
-}
-
-async function ensurePrivateBucket(baseUrl: string, serviceRoleKey: string) {
-  const response = await fetch(`${baseUrl}/storage/v1/bucket/${defaultBucket}`, {
-    headers: headers(serviceRoleKey),
-    cache: "no-store",
-    redirect: "error",
-  });
-  if (response.ok) {
-    await assertPrivateBucket(response);
+async function ensurePrivateBucket(client: ReturnType<typeof createStorageClient>["client"]) {
+  const { data: bucket, error } = await client.storage.getBucket(defaultBucket);
+  if (!error) {
+    if (bucket.public) {
+      throw new Error("El bucket de comprobantes existe, pero no está configurado como privado.");
+    }
     return;
   }
-  if (response.status !== 404) {
-    throw new Error("No se pudo verificar el bucket privado de comprobantes en Supabase Storage.");
+
+  const missing =
+    error.statusCode === "404" || error.message.toLowerCase().includes("bucket not found");
+  if (!missing) {
+    return;
   }
 
-  const create = await fetch(`${baseUrl}/storage/v1/bucket`, {
-    method: "POST",
-    headers: {
-      ...headers(serviceRoleKey, "application/json"),
-    },
-    body: JSON.stringify({
-      id: defaultBucket,
-      name: defaultBucket,
-      public: false,
-      file_size_limit: maximumProofSize,
-      allowed_mime_types: [...allowedTypes.keys()],
-    }),
-    cache: "no-store",
-    redirect: "error",
+  const { error: createError } = await client.storage.createBucket(defaultBucket, {
+    public: false,
+    fileSizeLimit: maximumProofSize,
+    allowedMimeTypes: [...allowedTypes.keys()],
   });
-  if (!create.ok && create.status !== 409) {
-    throw new Error("No se pudo crear el bucket privado de comprobantes en Supabase Storage.");
+  if (!createError) {
+    return;
   }
-  if (create.status === 409) {
-    const verify = await fetch(`${baseUrl}/storage/v1/bucket/${defaultBucket}`, {
-      headers: headers(serviceRoleKey),
-      cache: "no-store",
-      redirect: "error",
-    });
-    await assertPrivateBucket(verify);
+
+  const { data: existingBucket, error: verifyError } =
+    await client.storage.getBucket(defaultBucket);
+  if (!verifyError && existingBucket.public) {
+    throw new Error("El bucket de comprobantes existe, pero no está configurado como privado.");
   }
 }
 
@@ -142,25 +121,17 @@ export async function uploadPaymentProof(
     throw new Error("El contenido del archivo no coincide con una imagen JPG, PNG o WebP válida.");
   }
 
-  const { baseUrl, serviceRoleKey } = storageCredentials();
-  await ensurePrivateBucket(baseUrl, serviceRoleKey);
+  const { client } = createStorageClient();
+  await ensurePrivateBucket(client);
   const key = `${ownerId}/${crypto.randomUUID()}.${extension}`;
-  const response = await fetch(
-    `${baseUrl}/storage/v1/object/${storagePath(defaultBucket, key)}`,
-    {
-      method: "POST",
-      headers: {
-        ...headers(serviceRoleKey, file.type),
-        "x-upsert": "false",
-        "cache-control": "3600",
-      },
-      body: bytes,
-      cache: "no-store",
-      redirect: "error",
-    },
-  );
-  if (!response.ok) {
-    throw new Error("Supabase Storage no pudo guardar el comprobante. Intenta de nuevo.");
+  const { error } = await client.storage.from(defaultBucket).upload(key, bytes, {
+    contentType: file.type,
+    cacheControl: "3600",
+    upsert: false,
+  });
+  if (error) {
+    const status = error.statusCode ? ` (${error.statusCode})` : "";
+    throw new Error(`Supabase Storage no pudo guardar el comprobante: ${error.message}${status}`);
   }
   return {
     bucket: defaultBucket,
@@ -171,51 +142,20 @@ export async function uploadPaymentProof(
 }
 
 export async function deletePaymentProof(bucket: string, key: string) {
-  const { baseUrl, serviceRoleKey } = storageCredentials();
-  const response = await fetch(`${baseUrl}/storage/v1/object/${encodeURIComponent(bucket)}`, {
-    method: "DELETE",
-    headers: headers(serviceRoleKey, "application/json"),
-    body: JSON.stringify({ prefixes: [key] }),
-    cache: "no-store",
-    redirect: "error",
-  });
-  if (!response.ok && response.status !== 404) {
-    throw new Error("No se pudo eliminar el comprobante temporal de Supabase Storage.");
+  const { client } = createStorageClient();
+  const { error } = await client.storage.from(bucket).remove([key]);
+  if (error && error.statusCode !== "404") {
+    throw new Error(`No se pudo eliminar el comprobante temporal de Supabase Storage: ${error.message}`);
   }
 }
 
 export async function createPaymentProofUrl(bucket: string, key: string) {
-  const { baseUrl, serviceRoleKey } = storageCredentials();
-  const response = await fetch(
-    `${baseUrl}/storage/v1/object/sign/${storagePath(bucket, key)}`,
-    {
-      method: "POST",
-      headers: headers(serviceRoleKey, "application/json"),
-      body: JSON.stringify({ expiresIn: 120 }),
-      cache: "no-store",
-      redirect: "error",
-    },
-  );
-  if (!response.ok) {
-    throw new Error("No se pudo generar un enlace temporal al comprobante.");
+  const { baseUrl, client } = createStorageClient();
+  const { data, error } = await client.storage.from(bucket).createSignedUrl(key, 120);
+  if (error) {
+    throw new Error(`No se pudo generar un enlace temporal al comprobante: ${error.message}`);
   }
-  const body: unknown = await response.json();
-  if (
-    !body ||
-    typeof body !== "object" ||
-    !("signedURL" in body) ||
-    typeof body.signedURL !== "string"
-  ) {
-    throw new Error("Supabase Storage devolvió un enlace temporal inválido.");
-  }
-  const signedUrl = body.signedURL.startsWith("http")
-    ? new URL(body.signedURL)
-    : new URL(
-        body.signedURL.startsWith("/storage/v1/")
-          ? body.signedURL
-          : `/storage/v1${body.signedURL.startsWith("/") ? "" : "/"}${body.signedURL}`,
-        baseUrl,
-      );
+  const signedUrl = new URL(data.signedUrl, `${baseUrl}/`);
   if (signedUrl.origin !== new URL(baseUrl).origin) {
     throw new Error("Supabase Storage devolvió un enlace a un dominio inesperado.");
   }
