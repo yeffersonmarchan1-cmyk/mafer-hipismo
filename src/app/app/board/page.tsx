@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { Prisma } from "@prisma/client";
 import { closeDueRaceDays } from "@/lib/close-race-days";
+import { formatBs, formatBsFromCents } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 
 export default async function OfficialBoardPage() {
@@ -39,8 +40,8 @@ export default async function OfficialBoardPage() {
   const totalPool = raceDay
     ? raceDay.tickets
         .reduce(
-          (total, ticket) => total.add(ticket.amountUsd),
-          raceDay.carryoverAmount,
+          (total, ticket) => total.add(ticket.amountVes),
+          raceDay.carryoverAmountVes,
         )
         .toFixed(2)
     : new Prisma.Decimal(0).toFixed(2);
@@ -73,7 +74,7 @@ export default async function OfficialBoardPage() {
             <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-slate-500">
               {raceDay.status === "SETTLED" ? "Acumulado liquidado" : "Acumulado total recaudado"}
             </p>
-            <p className="mt-1 text-3xl font-black tabular-nums text-red-300">${totalPool}</p>
+            <p className="mt-1 text-3xl font-black tabular-nums text-red-300">{formatBs(totalPool)}</p>
           </div>
           <span className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider ${raceDay.status === "SETTLED" ? "bg-sky-400/10 text-sky-200" : "bg-amber-400/10 text-amber-200"}`}>
             {raceDay.status === "SETTLED" ? "Finalizada" : "Cerrada · En curso"}
@@ -115,8 +116,8 @@ export default async function OfficialBoardPage() {
           ) : (
             <>
               <p className="mt-4 text-sm text-slate-300">
-                Pozo repartido: <strong className="text-white">${raceDay.settlement.distributableUsd.toFixed(2)}</strong>
-                {" · "}Premio por cuadro: <strong className="text-green-300">${(raceDay.settlement.payoutEachCents / 100).toFixed(2)}</strong>
+                Pozo repartido: <strong className="text-white">{formatBs(raceDay.settlement.distributableVes.toFixed(2))}</strong>
+                {" · "}Premio por cuadro: <strong className="text-green-300">{formatBsFromCents(raceDay.settlement.payoutEachCents)}</strong>
               </p>
               <div className="mt-4 divide-y divide-white/[0.06] rounded-xl border border-white/[0.06]">
                 {raceDay.settlement.ticketPayouts.map((payout) => (
@@ -125,7 +126,7 @@ export default async function OfficialBoardPage() {
                       <p className="text-xs font-semibold text-white">{payout.ticket.user.fullName}</p>
                       <p className="mt-1 text-[10px] text-slate-500">Ticket #{payout.ticket.ticketNumber}</p>
                     </div>
-                    <p className="text-sm font-black text-green-300">${payout.amountUsd.toFixed(2)}</p>
+                    <p className="text-sm font-black text-green-300">{formatBs(payout.amountVes.toFixed(2))}</p>
                   </div>
                 ))}
               </div>

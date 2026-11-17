@@ -7,6 +7,7 @@ import {
   HorseManagementPanel,
   ManualRaceDayCreator,
 } from "@/app/admin/jornadas/horse-management";
+import { RaceDayDeleteAction } from "@/app/admin/jornadas/race-day-delete";
 import { prisma } from "@/lib/prisma";
 
 function nextSunday(): string {
@@ -110,9 +111,15 @@ export default async function RaceDaysAdminPage() {
                     : ""}
                 </p>
               </div>
-              <span className={`rounded-full px-3 py-1.5 text-[10px] font-bold ${day.status === "OPEN" ? "bg-emerald-400/10 text-emerald-300" : day.status === "SETTLED" ? "bg-sky-400/10 text-sky-200" : "bg-amber-400/10 text-amber-200"}`}>
-                {day.status === "OPEN" ? "Abierta · acepta apuestas" : day.status === "SETTLED" ? "Finalizada" : "Cerrada · en curso"}
-              </span>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className={`rounded-full px-3 py-1.5 text-[10px] font-bold ${day.status === "OPEN" ? "bg-emerald-400/10 text-emerald-300" : day.status === "SETTLED" ? "bg-sky-400/10 text-sky-200" : "bg-amber-400/10 text-amber-200"}`}>
+                  {day.status === "OPEN" ? "Abierta · acepta apuestas" : day.status === "SETTLED" ? "Finalizada" : "Cerrada · en curso"}
+                </span>
+                <RaceDayDeleteAction
+                  raceDayId={day.id}
+                  raceDayLabel={formatRaceDate(day.date)}
+                />
+              </div>
             </header>
 
             <RaceDayPhases status={day.status} />

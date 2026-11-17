@@ -54,8 +54,8 @@ model RaceDay {
   firstRaceAt           DateTime?
   closesAt              DateTime?
   closedAt              DateTime?
-  carryoverCents        Int                @default(0)
-  carryoverAmount       Decimal            @default(0) @db.Decimal(14, 2)
+  carryoverCents        BigInt             @default(0)
+  carryoverAmountVes    Decimal            @default(0) @db.Decimal(18, 2)
   inscriptionSource     String?
   inscriptionsUpdatedAt DateTime?
   rolloverFromId        String?            @unique
@@ -138,9 +138,6 @@ model Ticket {
   raceDayId       String
   userId          String
   combinations    BigInt
-  unitPriceUsd    Decimal           @default(5) @db.Decimal(12, 2)
-  amountUsd       Decimal           @db.Decimal(16, 2)
-  vesPerUsd       Decimal           @db.Decimal(14, 4)
   amountVes       Decimal           @db.Decimal(18, 2)
   status          TicketStatus      @default(PENDING)
   rejectionReason String?
@@ -192,10 +189,11 @@ model HorseReplacement {
 model PaymentProof {
   id                String   @id @default(cuid())
   ticketId          String   @unique
-  storageBucket     String   @default("payment-proofs")
-  storageKey        String
-  contentType       String
-  fileSizeBytes     Int
+  storageBucket     String?
+  storageKey        String?
+  contentType       String?
+  fileSizeBytes     Int?
+  paymentReference  String?
   sourcePhone       String
   expectedAmountVes Decimal  @db.Decimal(18, 2)
   uploadedAt        DateTime @default(now())
@@ -209,7 +207,6 @@ model SystemConfig {
   paymentBank   String?
   paymentCedula String?
   paymentPhone  String?
-  vesPerUsd     Decimal  @default(1) @db.Decimal(14, 4)
   infoMessage   String?
   updatedAt     DateTime @updatedAt
   createdAt     DateTime @default(now())
@@ -273,15 +270,15 @@ model WinningSelection {
 model Settlement {
   id                 String         @id @default(cuid())
   raceDayId          String         @unique
-  totalPoolCents     Int
-  commissionCents    Int
-  distributableCents Int
-  payoutEachCents    Int
-  remainderCents     Int
+  totalPoolCents     BigInt
+  commissionCents    BigInt
+  distributableCents BigInt
+  payoutEachCents    BigInt
+  remainderCents     BigInt
   winnerCount        Int
-  totalPoolUsd       Decimal        @default(0) @db.Decimal(16, 2)
-  commissionUsd      Decimal        @default(0) @db.Decimal(16, 2)
-  distributableUsd   Decimal        @default(0) @db.Decimal(16, 2)
+  totalPoolVes       Decimal        @default(0) @db.Decimal(18, 2)
+  commissionVes      Decimal        @default(0) @db.Decimal(18, 2)
+  distributableVes   Decimal        @default(0) @db.Decimal(18, 2)
   isCarryover        Boolean        @default(false)
   settledAt          DateTime       @default(now())
   raceDay            RaceDay        @relation(fields: [raceDayId], references: [id], onDelete: Restrict)
@@ -293,7 +290,7 @@ model TicketPayout {
   id           String     @id @default(cuid())
   settlementId String
   ticketId     String     @unique
-  amountUsd    Decimal    @db.Decimal(16, 2)
+  amountVes    Decimal    @db.Decimal(18, 2)
   settlement   Settlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
   ticket       Ticket     @relation(fields: [ticketId], references: [id], onDelete: Restrict)
 

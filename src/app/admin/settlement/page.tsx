@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { SettlementForm } from "@/app/admin/settlement/settlement-form";
 import { PrintButton } from "@/app/components/print-button";
+import { formatBs, formatBsFromCents } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 
 export default async function SettlementAdminPage() {
@@ -50,8 +51,8 @@ export default async function SettlementAdminPage() {
                 <PrintButton />
               </div>
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                <Summary label="Pozo total" value={`$${raceDay.settlement.totalPoolUsd.toFixed(2)}`} />
-                <Summary label="Comisión · 10%" value={`$${raceDay.settlement.commissionUsd.toFixed(2)}`} />
+                <Summary label="Pozo total" value={formatBs(raceDay.settlement.totalPoolVes.toFixed(2))} />
+                <Summary label="Comisión · 10%" value={formatBs(raceDay.settlement.commissionVes.toFixed(2))} />
                 <Summary label="Ganadores" value={String(raceDay.settlement.winnerCount)} />
               </div>
               <div className="mt-5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
@@ -83,12 +84,12 @@ export default async function SettlementAdminPage() {
                           <p className="text-xs font-semibold text-white">{payout.ticket.user.fullName}</p>
                           <p className="mt-0.5 text-[10px] text-slate-500">Ticket #{payout.ticket.ticketNumber}</p>
                         </div>
-                        <p className="text-sm font-black text-green-300">${payout.amountUsd.toFixed(2)}</p>
+                        <p className="text-sm font-black text-green-300">{formatBs(payout.amountVes.toFixed(2))}</p>
                       </div>
                     ))}
                   </div>
                   <p className="mt-3 text-[10px] text-slate-500">
-                    Premio por ticket: ${raceDay.settlement.payoutEachCents / 100} · remanente indivisible: {raceDay.settlement.remainderCents} centavos.
+                    Premio por ticket: {formatBsFromCents(raceDay.settlement.payoutEachCents)} · remanente indivisible: {raceDay.settlement.remainderCents.toString()} centavos.
                   </p>
                 </div>
               )}

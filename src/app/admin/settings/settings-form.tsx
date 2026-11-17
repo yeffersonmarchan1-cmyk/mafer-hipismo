@@ -10,7 +10,6 @@ export function SettingsForm({
     paymentBank: string;
     paymentCedula: string;
     paymentPhone: string;
-    vesPerUsd: string;
     infoMessage: string;
   };
 }) {
@@ -55,20 +54,6 @@ export function SettingsForm({
             name="paymentPhone"
             placeholder="+58 412 123 4567"
             required
-          />
-        </label>
-        <label className="block text-xs font-medium text-slate-300">
-          Tasa del día (Bs por USD)
-          <input
-            className="field mt-2"
-            defaultValue={initial.vesPerUsd}
-            inputMode="decimal"
-            max="9999999999.9999"
-            min="0.0001"
-            name="vesPerUsd"
-            required
-            step="0.0001"
-            type="number"
           />
         </label>
       </div>

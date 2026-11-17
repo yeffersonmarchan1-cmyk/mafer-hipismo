@@ -20,7 +20,12 @@ export async function GET(
       ticket: { select: { userId: true } },
     },
   });
-  if (!proof || (user.role !== "ADMIN" && proof.ticket.userId !== user.id)) {
+  if (
+    !proof ||
+    !proof.storageBucket ||
+    !proof.storageKey ||
+    (user.role !== "ADMIN" && proof.ticket.userId !== user.id)
+  ) {
     return NextResponse.json({ error: "Comprobante no disponible." }, { status: 404 });
   }
 

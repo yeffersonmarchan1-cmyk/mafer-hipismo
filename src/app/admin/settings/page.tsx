@@ -18,7 +18,6 @@ export default async function SettingsAdminPage() {
           paymentBank: config?.paymentBank ?? "",
           paymentCedula: config?.paymentCedula ?? "",
           paymentPhone: config?.paymentPhone ?? "",
-          vesPerUsd: config?.vesPerUsd.toFixed(4) ?? "1.0000",
           infoMessage: config?.infoMessage ?? "",
         }} />
       </div>

@@ -59,6 +59,9 @@ En despliegue web, configura todas esas variables en el proveedor de hosting;
 no las incluyas en el cliente ni en Git. La aplicación acepta comprobantes JPG,
 PNG o WebP de hasta 5 MB y genera enlaces firmados de dos minutos solo después
 de verificar que quien los solicita es su propietario o un administrador.
+Cada jugada debe incluir una imagen del comprobante, una referencia de pago o
+ambas. Para subir o consultar imágenes se necesitan `SUPABASE_URL` y
+`SUPABASE_SERVICE_ROLE_KEY`; los dos valores solo se usan en el servidor.
 Configura un cron del proveedor para llamar cada minuto a
 `GET /api/cron/close-race-days` con `Authorization: Bearer $CRON_SECRET`.
 Las páginas de juego y pizarra también ejecutan el cierre vencido cuando se
@@ -102,9 +105,11 @@ del jugador muestra gualdrapa y nombre de todos los ejemplares activos.
 ## Operación de jornadas
 
 - Los jugadores seleccionan ejemplares activos de las seis válidas. El servidor
-  vuelve a validar cada selección, calcula combinaciones × $5, fija la tasa
-  configurada y solo entonces carga el comprobante privado y crea el ticket
-  pendiente.
+  vuelve a validar cada selección y calcula el importe fijo de **Bs. 5 por
+  combinación**. Guarda el pago reportado y crea el ticket pendiente; la imagen
+  privada es opcional si el jugador proporciona una referencia.
+- Todos los tickets, acumulados, arrastres, comisiones y premios se guardan y
+  muestran en bolívares (Bs.), con formato local, por ejemplo `Bs. 1.500,00`.
 - Aprobar un pago lo incluye en el pozo; rechazarlo no lo suma. Retirar un
   ejemplar reemplaza las selecciones existentes por el siguiente ejemplar activo
   en el orden de Gaceta, con vuelta al inicio y registro de auditoría.
@@ -121,6 +126,13 @@ del jugador muestra gualdrapa y nombre de todos los ejemplares activos.
 - En `/admin/users` se pueden activar/desactivar cuentas y restablecer
   contraseñas; ambas operaciones invalidan las sesiones anteriores y el sistema
   impide desactivar la última cuenta `ADMIN` activa.
+
+Al desplegar cambios de esquema, ejecuta `npm run db:deploy` antes de activar la
+nueva versión de la aplicación. La migración de bolívares conserva el importe
+VES ya guardado por ticket, convierte los arrastres anteriores usando la tasa
+configurada en ese momento y recalcula pozos y premios liquidados a partir de
+esos importes. Verifica una copia de seguridad antes de aplicar migraciones a
+una base de datos de producción.
 
 ## Escritorio Windows
 

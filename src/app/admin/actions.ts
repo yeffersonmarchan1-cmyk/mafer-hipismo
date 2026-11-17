@@ -5,6 +5,8 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { normalizePhone } from "@/lib/auth-validation";
+import { formatBs } from "@/lib/currency";
+import { deletePaymentProof } from "@/lib/payment-storage";
 import { prisma } from "@/lib/prisma";
 
 export type AdminActionState = {
@@ -47,6 +49,123 @@ export async function closeRaceDay(formData: FormData) {
     throw new Error("La jornada ya no está abierta o no existe.");
   }
   revalidateOperationalPages();
+}
+
+export async function deleteRaceDay(
+  _previous: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  await requireAdmin();
+  const raceDayId = formData.get("raceDayId");
+  if (typeof raceDayId !== "string" || !raceDayId) {
+    return { error: "La jornada seleccionada no es válida." };
+  }
+
+  const result = await prisma.$transaction(
+    async (transaction) => {
+      const day = await transaction.raceDay.findUnique({
+        where: { id: raceDayId },
+        select: {
+          id: true,
+          settlement: {
+            select: { id: true, totalPoolCents: true, totalPoolVes: true, isCarryover: true },
+          },
+          rolloverTo: {
+            select: { id: true, carryoverAmountVes: true, carryoverCents: true },
+          },
+          tickets: {
+            select: {
+              paymentProof: {
+                select: { storageBucket: true, storageKey: true },
+              },
+            },
+          },
+        },
+      });
+      if (!day) return "NOT_FOUND" as const;
+
+      if (day.rolloverTo && day.settlement?.isCarryover) {
+        const remainingCarryover = Prisma.Decimal.max(
+          new Prisma.Decimal(0),
+          day.rolloverTo.carryoverAmountVes.minus(day.settlement.totalPoolVes),
+        );
+        const remainingCarryoverCents =
+          day.rolloverTo.carryoverCents - day.settlement.totalPoolCents;
+        await transaction.raceDay.update({
+          where: { id: day.rolloverTo.id },
+          data: {
+            rolloverFromId: null,
+            carryoverAmountVes: remainingCarryover,
+            carryoverCents:
+              remainingCarryoverCents > BigInt(0) ? remainingCarryoverCents : BigInt(0),
+          },
+        });
+      }
+
+      const settlementId = day.settlement?.id;
+      await transaction.ticketPayout.deleteMany({
+        where: {
+          OR: [
+            { ticket: { raceDayId } },
+            ...(settlementId ? [{ settlementId }] : []),
+          ],
+        },
+      });
+      await transaction.payout.deleteMany({
+        where: {
+          OR: [
+            { bet: { raceDayId } },
+            ...(settlementId ? [{ settlementId }] : []),
+          ],
+        },
+      });
+      await transaction.settlement.deleteMany({ where: { raceDayId } });
+      await transaction.ticket.deleteMany({ where: { raceDayId } });
+      await transaction.bet.deleteMany({ where: { raceDayId } });
+      await transaction.winningSelection.deleteMany({ where: { raceDayId } });
+      await transaction.horseReplacement.deleteMany({
+        where: {
+          OR: [
+            { fromHorse: { raceDayId } },
+            { toHorse: { raceDayId } },
+          ],
+        },
+      });
+      await transaction.raceDayHorse.deleteMany({ where: { raceDayId } });
+      await transaction.raceDay.delete({ where: { id: raceDayId } });
+
+      return {
+        kind: "DELETED" as const,
+        proofs: day.tickets.flatMap((ticket) => {
+          const proof = ticket.paymentProof;
+          return proof?.storageBucket && proof.storageKey
+            ? [{ bucket: proof.storageBucket, key: proof.storageKey }]
+            : [];
+        }),
+      };
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
+
+  if (result === "NOT_FOUND") return { error: "No se encontró la jornada." };
+
+  const failedProofDeletes: string[] = [];
+  for (const proof of result.proofs) {
+    try {
+      await deletePaymentProof(proof.bucket, proof.key);
+    } catch (error) {
+      console.error("Could not delete payment proof for deleted race day:", error);
+      failedProofDeletes.push(proof.key);
+    }
+  }
+
+  revalidateOperationalPages();
+  if (failedProofDeletes.length) {
+    return {
+      error: "La jornada y sus registros fueron eliminados, pero no se pudieron borrar uno o más comprobantes de Supabase Storage. Revisa los registros del servidor.",
+    };
+  }
+  return { success: "Jornada eliminada correctamente." };
 }
 
 export async function reviewTicket(
@@ -116,7 +235,6 @@ export async function saveSystemConfig(
   const paymentBank = String(formData.get("paymentBank") ?? "").trim();
   const paymentCedula = String(formData.get("paymentCedula") ?? "").trim();
   const rawPhone = String(formData.get("paymentPhone") ?? "").trim();
-  const rawRate = String(formData.get("vesPerUsd") ?? "").trim().replace(",", ".");
   const infoMessage = String(formData.get("infoMessage") ?? "").trim();
   const paymentPhone = normalizePhone(rawPhone);
 
@@ -129,12 +247,8 @@ export async function saveSystemConfig(
   if (!paymentPhone) {
     return { error: "Indica un teléfono de Pago Móvil válido con código de país." };
   }
-  if (!/^\d{1,10}(?:\.\d{1,4})?$/.test(rawRate)) {
-    return { error: "La tasa debe ser positiva con hasta cuatro decimales." };
-  }
-  const rate = new Prisma.Decimal(rawRate);
-  if (rate.lte(0) || infoMessage.length > 1000) {
-    return { error: "La tasa debe ser mayor que cero y el mensaje no puede exceder 1000 caracteres." };
+  if (infoMessage.length > 1000) {
+    return { error: "El mensaje no puede exceder 1000 caracteres." };
   }
 
   await prisma.systemConfig.upsert({
@@ -144,14 +258,12 @@ export async function saveSystemConfig(
       paymentBank,
       paymentCedula,
       paymentPhone,
-      vesPerUsd: rate,
       infoMessage: infoMessage || null,
     },
     update: {
       paymentBank,
       paymentCedula,
       paymentPhone,
-      vesPerUsd: rate,
       infoMessage: infoMessage || null,
     },
   });
@@ -291,16 +403,17 @@ export async function settleRaceDay(
       where: { raceDayId, status: "APPROVED" },
       select: {
         id: true,
-        amountUsd: true,
+        amountVes: true,
         selections: { select: { legNumber: true, currentHorseId: true } },
       },
     });
     const approvedCents = approved.reduce(
-      (total, ticket) => total + toCents(ticket.amountUsd),
+      (total, ticket) => total + toCents(ticket.amountVes),
       BigInt(0),
     );
-    const totalPoolCents = approvedCents + toCents(day.carryoverAmount);
-    if (totalPoolCents > BigInt(2147483647)) {
+    const totalPoolCents = approvedCents + toCents(day.carryoverAmountVes);
+    const maximumPoolCents = BigInt("999999999999999999");
+    if (totalPoolCents > maximumPoolCents) {
       return { kind: "POOL_TOO_LARGE" as const };
     }
 
@@ -326,21 +439,16 @@ export async function settleRaceDay(
       winnerCount === 0
         ? BigInt(0)
         : distributableCents % BigInt(winnerCount);
-    const maximumInt = BigInt(2147483647);
-    if (
-      [commissionCents, distributableCents, payoutEachCents, remainderCents].some(
-        (value) => value > maximumInt,
-      )
-    ) {
+    if (payoutEachCents > maximumPoolCents) {
       return { kind: "POOL_TOO_LARGE" as const };
     }
 
     let rolloverDay:
       | {
           id: string;
-          carryoverAmount: Prisma.Decimal;
+          carryoverAmountVes: Prisma.Decimal;
           rolloverFromId: string | null;
-          carryoverCents: number;
+          carryoverCents: bigint;
         }
       | null = null;
     let createRolloverDate: Date | null = null;
@@ -352,15 +460,15 @@ export async function settleRaceDay(
         orderBy: { date: "asc" },
         select: {
           id: true,
-          carryoverAmount: true,
+          carryoverAmountVes: true,
           rolloverFromId: true,
           carryoverCents: true,
         },
       });
       if (rolloverDay) {
         const newCarryoverCents =
-          toCents(rolloverDay.carryoverAmount) + totalPoolCents;
-        if (newCarryoverCents > maximumInt) {
+          toCents(rolloverDay.carryoverAmountVes) + totalPoolCents;
+        if (newCarryoverCents > maximumPoolCents) {
           return { kind: "POOL_TOO_LARGE" as const };
         }
       } else {
@@ -371,15 +479,15 @@ export async function settleRaceDay(
     const settlement = await transaction.settlement.create({
       data: {
         raceDayId,
-        totalPoolCents: Number(totalPoolCents),
-        commissionCents: Number(commissionCents),
-        distributableCents: Number(distributableCents),
-        payoutEachCents: Number(payoutEachCents),
-        remainderCents: Number(remainderCents),
+        totalPoolCents,
+        commissionCents,
+        distributableCents,
+        payoutEachCents,
+        remainderCents,
         winnerCount,
-        totalPoolUsd: decimalFromCents(totalPoolCents),
-        commissionUsd: decimalFromCents(commissionCents),
-        distributableUsd: decimalFromCents(distributableCents),
+        totalPoolVes: decimalFromCents(totalPoolCents),
+        commissionVes: decimalFromCents(commissionCents),
+        distributableVes: decimalFromCents(distributableCents),
         isCarryover: winnerCount === 0,
       },
     });
@@ -396,7 +504,7 @@ export async function settleRaceDay(
         data: winningTickets.map((ticket) => ({
           settlementId: settlement.id,
           ticketId: ticket.id,
-          amountUsd: decimalFromCents(payoutEachCents),
+          amountVes: decimalFromCents(payoutEachCents),
         })),
       });
     } else {
@@ -413,25 +521,25 @@ export async function settleRaceDay(
             date: createRolloverDate!,
             venue: day.venue,
             rolloverFromId: day.id,
-            carryoverAmount: decimalFromCents(totalPoolCents),
-            carryoverCents: Number(totalPoolCents),
+            carryoverAmountVes: decimalFromCents(totalPoolCents),
+            carryoverCents: totalPoolCents,
           },
           update: {},
           select: {
             id: true,
-            carryoverAmount: true,
+            carryoverAmountVes: true,
             rolloverFromId: true,
             carryoverCents: true,
           },
         }));
       if (rolloverDay) {
         const newCarryoverCents =
-          toCents(targetDay.carryoverAmount) + totalPoolCents;
+          toCents(targetDay.carryoverAmountVes) + totalPoolCents;
         await transaction.raceDay.update({
           where: { id: targetDay.id },
           data: {
-            carryoverAmount: { increment: decimalFromCents(totalPoolCents) },
-            carryoverCents: Number(newCarryoverCents),
+            carryoverAmountVes: { increment: decimalFromCents(totalPoolCents) },
+            carryoverCents: newCarryoverCents,
             ...(targetDay.rolloverFromId ? {} : { rolloverFromId: day.id }),
           },
         });
@@ -470,9 +578,9 @@ export async function settleRaceDay(
   revalidateOperationalPages();
   return result.winnerCount === 0
     ? {
-        success: `Jornada desierta. El pozo de $${decimalFromCents(result.totalPoolCents).toFixed(2)} pasó a la siguiente jornada.`,
+        success: `Jornada desierta. El pozo de ${formatBs(decimalFromCents(result.totalPoolCents).toFixed(2))} pasó a la siguiente jornada.`,
       }
     : {
-        success: `Liquidación completada: ${result.winnerCount} cuadro(s), $${decimalFromCents(result.payoutEachCents).toFixed(2)} por ticket ganador y comisión de $${decimalFromCents(result.commissionCents).toFixed(2)}.`,
+        success: `Liquidación completada: ${result.winnerCount} cuadro(s), ${formatBs(decimalFromCents(result.payoutEachCents).toFixed(2))} por ticket ganador y comisión de ${formatBs(decimalFromCents(result.commissionCents).toFixed(2))}.`,
       };
 }

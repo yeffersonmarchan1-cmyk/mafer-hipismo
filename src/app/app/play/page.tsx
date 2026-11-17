@@ -18,7 +18,7 @@ export default async function PlayPage() {
           },
           tickets: {
             where: { status: "APPROVED" },
-            select: { amountUsd: true },
+            select: { amountVes: true },
           },
         },
       })
@@ -29,8 +29,8 @@ export default async function PlayPage() {
   const totalPool = raceDay
     ? raceDay.tickets
         .reduce(
-          (total, ticket) => total.add(ticket.amountUsd),
-          raceDay.carryoverAmount,
+          (total, ticket) => total.add(ticket.amountVes),
+          raceDay.carryoverAmountVes,
         )
         .toFixed(2)
     : new Prisma.Decimal(0).toFixed(2);
@@ -77,7 +77,6 @@ export default async function PlayPage() {
         bank: paymentConfig?.paymentBank ?? "",
         cedula: paymentConfig?.paymentCedula ?? "",
         phone: paymentConfig?.paymentPhone ?? "",
-        rate: paymentConfig?.vesPerUsd.toFixed(4) ?? "1.0000",
         message: paymentConfig?.infoMessage ?? "",
       }}
     />

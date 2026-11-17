@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import { formatBs } from "@/lib/currency";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -21,7 +22,15 @@ export default async function TicketsPage() {
         orderBy: [{ legNumber: "asc" }, { currentHorse: { gazetteOrder: "asc" } }],
         include: { currentHorse: { select: { saddlecloth: true, name: true, status: true } } },
       },
-      paymentProof: { select: { sourcePhone: true, uploadedAt: true } },
+      paymentProof: {
+        select: {
+          sourcePhone: true,
+          uploadedAt: true,
+          paymentReference: true,
+          storageBucket: true,
+          storageKey: true,
+        },
+      },
     },
   });
 
@@ -64,14 +73,16 @@ export default async function TicketsPage() {
               })}
             </div>
             <p className="mt-4 text-[11px] text-slate-500">
-              {ticket.paymentProof ? `Comprobante recibido · teléfono ${ticket.paymentProof.sourcePhone}` : "Sin comprobante asociado"}
+              {ticket.paymentProof
+                ? `Pago reportado · teléfono ${ticket.paymentProof.sourcePhone}${ticket.paymentProof.paymentReference ? ` · referencia ${ticket.paymentProof.paymentReference}` : ""}`
+                : "Sin comprobante asociado"}
               {ticket.status === "REJECTED" && ticket.rejectionReason ? ` · Motivo: ${ticket.rejectionReason}` : ""}
             </p>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
               <p className="text-[10px] text-slate-500">
-                Importe: ${ticket.amountUsd.toFixed(2)} · Bs. {ticket.amountVes.toFixed(2)}
+                Importe: {formatBs(ticket.amountVes.toFixed(2))}
               </p>
-              {ticket.paymentProof && (
+              {ticket.paymentProof?.storageKey && ticket.paymentProof.storageBucket && (
                 <a
                   className="text-[10px] font-semibold text-red-300 underline decoration-red-500/30 underline-offset-4 hover:text-red-200"
                   href={`/api/payment-proofs/${ticket.id}`}

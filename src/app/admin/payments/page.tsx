@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Prisma } from "@prisma/client";
 import { TicketReviewActions } from "@/app/admin/payments/ticket-review-actions";
+import { formatBs } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 
 export default async function PaymentsAdminPage() {
@@ -29,17 +30,17 @@ export default async function PaymentsAdminPage() {
       select: {
         id: true,
         date: true,
-        carryoverAmount: true,
-        tickets: { where: { status: "APPROVED" }, select: { amountUsd: true } },
+        carryoverAmountVes: true,
+        tickets: { where: { status: "APPROVED" }, select: { amountVes: true } },
       },
     }),
   ]);
   const approvedPool =
     openDay?.tickets.reduce(
-      (total, ticket) => total.add(ticket.amountUsd),
+      (total, ticket) => total.add(ticket.amountVes),
       new Prisma.Decimal(0),
     ) ?? new Prisma.Decimal(0);
-  const pool = approvedPool.add(openDay?.carryoverAmount ?? new Prisma.Decimal(0));
+  const pool = approvedPool.add(openDay?.carryoverAmountVes ?? new Prisma.Decimal(0));
 
   return (
     <section className="page-enter mx-auto max-w-6xl">
@@ -55,7 +56,7 @@ export default async function PaymentsAdminPage() {
         </article>
         <article className="rounded-2xl border border-red-500/15 bg-[#1a1d26] p-4">
           <p className="text-xs text-slate-500">Pozo de jornada</p>
-          <p className="mt-2 text-2xl font-black tabular-nums text-red-300">${pool.toFixed(2)}</p>
+          <p className="mt-2 text-2xl font-black tabular-nums text-red-300">{formatBs(pool.toFixed(2))}</p>
           <p className="mt-1 text-[10px] text-slate-500">Incluye solo tickets aprobados</p>
         </article>
         <article className="rounded-2xl border border-white/[0.07] bg-[#1a1d26] p-4">
@@ -105,11 +106,12 @@ export default async function PaymentsAdminPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Monto esperado</p>
-                    <p className="mt-1 text-sm font-black text-white">Bs. {ticket.amountVes.toFixed(2)}</p>
-                    <p className="mt-0.5 text-[10px] text-slate-500">${ticket.amountUsd.toFixed(2)} · {ticket.combinations.toString()} combinaciones</p>
+                    <p className="mt-1 text-sm font-black text-white">{formatBs(ticket.amountVes.toFixed(2))}</p>
+                    <p className="mt-0.5 text-[10px] text-slate-500">{ticket.combinations.toString()} combinaciones</p>
                     {ticket.paymentProof && <p className="mt-2 text-[10px] text-slate-400">Origen: {ticket.paymentProof.sourcePhone}</p>}
+                    {ticket.paymentProof?.paymentReference && <p className="mt-1 break-all text-[10px] text-slate-400">Referencia: {ticket.paymentProof.paymentReference}</p>}
                   </div>
-                  {ticket.paymentProof ? (
+                  {ticket.paymentProof?.storageKey && ticket.paymentProof.storageBucket ? (
                     <Link
                       className="shrink-0 rounded-lg border border-red-500/20 bg-red-500/[0.08] px-3 py-2 text-[10px] font-bold text-red-200 hover:bg-red-500/15"
                       href={`/api/payment-proofs/${ticket.id}`}
@@ -118,6 +120,8 @@ export default async function PaymentsAdminPage() {
                     >
                       Ver comprobante ↗
                     </Link>
+                  ) : ticket.paymentProof?.paymentReference ? (
+                    <span className="text-[10px] text-emerald-300">Referencia recibida</span>
                   ) : <span className="text-[10px] text-rose-300">Sin comprobante</span>}
                 </div>
               </div>

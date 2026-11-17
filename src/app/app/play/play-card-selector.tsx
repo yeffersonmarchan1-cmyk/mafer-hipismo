@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 import { submitTicket, type TicketSubmissionState } from "@/app/app/play/actions";
+import { formatBs, formatBsFromCents } from "@/lib/currency";
 
 type Horse = {
   id: string;
@@ -28,7 +29,6 @@ export function PlayCardSelector({
     bank: string;
     cedula: string;
     phone: string;
-    rate: string;
     message: string;
   };
 }) {
@@ -38,6 +38,8 @@ export function PlayCardSelector({
   );
   const [activeLeg, setActiveLeg] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [paymentReference, setPaymentReference] = useState("");
+  const [hasProofFile, setHasProofFile] = useState(false);
 
   const selectionsByLeg = useMemo(
     () =>
@@ -53,7 +55,7 @@ export function PlayCardSelector({
   const combinations = counts.some((count) => count === 0)
     ? BigInt(0)
     : counts.reduce((total, count) => total * BigInt(count), BigInt(1));
-  const amount = combinations * BigInt(5);
+  const amountCents = combinations * BigInt(500);
   const activeHorses = horses
     .filter((horse) => horse.legNumber === activeLeg)
     .sort((a, b) => a.gazetteOrder - b.gazetteOrder);
@@ -103,7 +105,7 @@ export function PlayCardSelector({
             Pozo total
           </p>
           <p className="mt-0.5 text-lg font-black tabular-nums text-red-300">
-            ${carryoverAmount}
+            {formatBs(carryoverAmount)}
           </p>
         </div>
       </section>
@@ -248,7 +250,7 @@ export function PlayCardSelector({
             </h2>
           </div>
           <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[9px] font-semibold text-slate-400">
-            Tasa ${payment.rate} Bs/$
+            Bs. 5 por combinación
           </span>
         </div>
         <dl className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -281,16 +283,34 @@ export function PlayCardSelector({
             />
           </label>
           <label className="block text-xs font-medium text-slate-300">
-            Comprobante de Pago Móvil
+            Imagen del comprobante
             <input
               accept="image/jpeg,image/png,image/webp"
               className="field mt-2 file:mr-3 file:rounded-md file:border-0 file:bg-red-500/15 file:px-3 file:py-1.5 file:text-[10px] file:font-semibold file:text-red-200"
               name="proof"
-              required
+              onChange={(event) =>
+                setHasProofFile(Boolean(event.currentTarget.files?.length))
+              }
+              required={!paymentReference.trim()}
               type="file"
             />
             <span className="mt-1 block text-[10px] text-slate-500">
               JPG, PNG o WebP · máximo 5 MB · guardado privado.
+            </span>
+          </label>
+          <label className="block text-xs font-medium text-slate-300">
+            O referencia del pago
+            <input
+              autoComplete="off"
+              className="field mt-2"
+              maxLength={100}
+              name="paymentReference"
+              onChange={(event) => setPaymentReference(event.currentTarget.value)}
+              placeholder="Número de referencia"
+              required={!hasProofFile}
+            />
+            <span className="mt-1 block text-[10px] text-slate-500">
+              Puedes adjuntar la imagen, indicar la referencia o enviar ambos.
             </span>
           </label>
         </div>
@@ -320,14 +340,14 @@ export function PlayCardSelector({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
               <span>Combinaciones</span>
-              <span className="text-slate-700">× $5</span>
+              <span className="text-slate-700">× Bs. 5</span>
             </div>
             <div className="mt-0.5 flex flex-wrap items-baseline gap-x-3">
               <span className="text-lg font-black tabular-nums text-white sm:text-xl">
                 {money.format(combinations)}
               </span>
               <span className="text-xs font-bold tabular-nums text-red-300">
-                ${money.format(amount)}
+                {formatBsFromCents(amountCents)}
               </span>
             </div>
           </div>

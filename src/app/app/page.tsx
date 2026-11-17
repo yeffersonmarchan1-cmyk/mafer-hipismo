@@ -8,7 +8,7 @@ export default async function PlayerDashboardPage() {
     ? await prisma.raceDay.findFirst({
         where: { status: "OPEN" },
         orderBy: { date: "asc" },
-        select: { date: true, carryoverAmount: true },
+        select: { date: true },
       })
     : null;
 

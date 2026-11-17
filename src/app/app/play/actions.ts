@@ -18,10 +18,6 @@ function decimalFromCents(cents: bigint) {
   return `${whole}.${fraction}`;
 }
 
-function rateToScaledInteger(rate: Prisma.Decimal) {
-  return BigInt(rate.toFixed(4).replace(".", ""));
-}
-
 function isRetryableTransactionError(error: unknown) {
   return (
     error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -37,15 +33,30 @@ export async function submitTicket(
   const raceDayId = formData.get("raceDayId");
   const rawSelections = formData.get("selections");
   const sourcePhone = formData.get("sourcePhone");
-  const proof = formData.get("proof");
+  const proofValue = formData.get("proof");
+  const rawPaymentReference = formData.get("paymentReference");
 
   if (
     typeof raceDayId !== "string" ||
     typeof rawSelections !== "string" ||
     typeof sourcePhone !== "string" ||
-    !(proof instanceof File)
+    (proofValue !== null && !(proofValue instanceof File)) ||
+    (rawPaymentReference !== null && typeof rawPaymentReference !== "string")
   ) {
-    return { error: "Completa la jugada, el teléfono de origen y adjunta el comprobante." };
+    return { error: "Completa la jugada y los datos del pago." };
+  }
+  const paymentReference =
+    typeof rawPaymentReference === "string" ? rawPaymentReference.trim() : "";
+  if (
+    paymentReference.length > 100 ||
+    /[\u0000-\u001f\u007f]/.test(paymentReference)
+  ) {
+    return { error: "La referencia de pago no puede exceder 100 caracteres." };
+  }
+  const proof =
+    proofValue instanceof File && proofValue.size > 0 ? proofValue : null;
+  if (!proof && !paymentReference) {
+    return { error: "Adjunta una imagen del comprobante o escribe la referencia del pago." };
   }
   const phone = normalizePhone(sourcePhone);
   if (!phone) {
@@ -117,35 +128,35 @@ export async function submitTicket(
     !config ||
     !config.paymentBank?.trim() ||
     !config.paymentCedula?.trim() ||
-    !config.paymentPhone?.trim() ||
-    config.vesPerUsd.lte(0)
+    !config.paymentPhone?.trim()
   ) {
-    return { error: "Administración aún no configuró los datos de Pago Móvil y la tasa del día." };
+    return { error: "Administración aún no configuró los datos de Pago Móvil." };
   }
 
-  let uploaded: Awaited<ReturnType<typeof uploadPaymentProof>>;
-  try {
-    uploaded = await uploadPaymentProof(proof, user.id);
-  } catch (error) {
-    if (error instanceof Error) return { error: error.message };
-    throw error;
+  let uploaded: Awaited<ReturnType<typeof uploadPaymentProof>> | null = null;
+  if (proof) {
+    try {
+      uploaded = await uploadPaymentProof(proof, user.id);
+    } catch (error) {
+      if (error instanceof Error) return { error: error.message };
+      throw error;
+    }
   }
 
   const combinations = selectionsByLeg.reduce(
     (total, leg) => total * BigInt(leg.length),
     BigInt(1),
   );
-  const amountUsdCents = combinations * BigInt(500);
-  const amountVesCents =
-    (amountUsdCents * rateToScaledInteger(config.vesPerUsd) + BigInt(5000)) /
-    BigInt(10000);
-  if (amountUsdCents > BigInt("9999999999999999") || amountVesCents > BigInt("999999999999999999")) {
-    try {
-      await deletePaymentProof(uploaded.bucket, uploaded.key);
-    } catch (cleanupError) {
-      throw new Error(
-        `El importe de la jugada supera el límite permitido y no se pudo eliminar el archivo temporal: ${cleanupError instanceof Error ? cleanupError.message : "error desconocido"}`,
-      );
+  const amountVesCents = combinations * BigInt(500);
+  if (amountVesCents > BigInt("999999999999999999")) {
+    if (uploaded) {
+      try {
+        await deletePaymentProof(uploaded.bucket, uploaded.key);
+      } catch (cleanupError) {
+        throw new Error(
+          `El importe de la jugada supera el límite permitido y no se pudo eliminar el archivo temporal: ${cleanupError instanceof Error ? cleanupError.message : "error desconocido"}`,
+        );
+      }
     }
     return { error: "El importe de esta combinación supera el máximo permitido." };
   }
@@ -202,8 +213,6 @@ export async function submitTicket(
                 raceDayId,
                 userId: user.id,
                 combinations,
-                amountUsd: decimalFromCents(amountUsdCents),
-                vesPerUsd: config.vesPerUsd,
                 amountVes: decimalFromCents(amountVesCents),
                 submittedAt: createdAt,
                 selections: {
@@ -217,10 +226,11 @@ export async function submitTicket(
                 },
                 paymentProof: {
                   create: {
-                    storageBucket: uploaded.bucket,
-                    storageKey: uploaded.key,
-                    contentType: uploaded.contentType,
-                    fileSizeBytes: uploaded.fileSizeBytes,
+                    storageBucket: uploaded?.bucket ?? null,
+                    storageKey: uploaded?.key ?? null,
+                    contentType: uploaded?.contentType ?? null,
+                    fileSizeBytes: uploaded?.fileSizeBytes ?? null,
+                    paymentReference: paymentReference || null,
                     sourcePhone: phone,
                     expectedAmountVes: decimalFromCents(amountVesCents),
                   },
@@ -237,22 +247,25 @@ export async function submitTicket(
       }
     }
   } catch (error) {
-    try {
-      await deletePaymentProof(uploaded.bucket, uploaded.key);
-    } catch (cleanupError) {
-      throw new Error(
-        `No se guardó el ticket y falló la limpieza del comprobante temporal: ${cleanupError instanceof Error ? cleanupError.message : "error desconocido"}`,
-      );
+    if (uploaded) {
+      try {
+        await deletePaymentProof(uploaded.bucket, uploaded.key);
+      } catch (cleanupError) {
+        throw new Error(
+          `No se guardó el ticket y falló la limpieza del comprobante temporal: ${cleanupError instanceof Error ? cleanupError.message : "error desconocido"}`,
+        );
+      }
     }
     if (error instanceof Error) return { error: error.message };
     throw error;
   }
 
   if (!created) {
-    await deletePaymentProof(uploaded.bucket, uploaded.key);
+    if (uploaded) await deletePaymentProof(uploaded.bucket, uploaded.key);
     return { error: "No se pudo reservar un número de ticket. Intenta nuevamente." };
   }
 
+  revalidatePath("/admin");
   revalidatePath("/app");
   revalidatePath("/app/play");
   revalidatePath("/app/tickets");
