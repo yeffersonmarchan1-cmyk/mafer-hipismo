@@ -32,6 +32,13 @@ export function PaymentProofViewer({
       );
       if (!response.ok) {
         const body: unknown = await response.json().catch(() => null);
+        const requestId =
+          body &&
+          typeof body === "object" &&
+          "requestId" in body &&
+          typeof body.requestId === "string"
+            ? body.requestId
+            : null;
         const message =
           body &&
           typeof body === "object" &&
@@ -39,7 +46,9 @@ export function PaymentProofViewer({
           typeof body.error === "string"
             ? body.error
             : `No se pudo cargar el comprobante (HTTP ${response.status}).`;
-        throw new Error(message);
+        throw new Error(
+          requestId ? `${message} Referencia: ${requestId}` : message,
+        );
       }
       const blob = await response.blob();
       if (!blob.type.startsWith("image/")) {
