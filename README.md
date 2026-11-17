@@ -113,6 +113,11 @@ del jugador muestra gualdrapa y nombre de todos los ejemplares activos.
   distribuye 90% en partes iguales por ticket ganador. Sin ganadores, el 100%
   del pozo se traslada a la siguiente jornada. El reporte se puede imprimir o
   guardar como PDF desde el navegador.
+- La jornada sigue las fases `Abierta` → `Cerrada / En curso` → `Finalizada`.
+  Al cerrarse, la pizarra muestra tickets aprobados y acumulado; al liquidarse,
+  muestra la combinación ganadora y los pagos. Las inscripciones pueden
+  corregirse mientras esté abierta o en curso; después de liquidarla quedan
+  bloqueadas para proteger los resultados y el historial de apuestas.
 - En `/admin/users` se pueden activar/desactivar cuentas y restablecer
   contraseñas; ambas operaciones invalidan las sesiones anteriores y el sistema
   impide desactivar la última cuenta `ADMIN` activa.

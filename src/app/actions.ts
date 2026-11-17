@@ -132,6 +132,70 @@ function parseManualHorseList(text: string) {
   return horses;
 }
 
+async function withdrawHorseInTransaction(
+  transaction: Prisma.TransactionClient,
+  horseId: string,
+) {
+  const horse = await transaction.raceDayHorse.findUnique({
+    where: { id: horseId },
+    include: {
+      raceDay: {
+        select: {
+          id: true,
+          status: true,
+          entries: {
+            where: { status: "ACTIVE" },
+            orderBy: { gazetteOrder: "asc" },
+            select: { id: true, legNumber: true, gazetteOrder: true },
+          },
+        },
+      },
+    },
+  });
+  if (!horse || horse.raceDay.status === "SETTLED") return "FINALIZED" as const;
+  if (horse.status === "WITHDRAWN") return "ALREADY_WITHDRAWN" as const;
+
+  const activeAfterWithdrawal = horse.raceDay.entries.filter(
+    (entry) => entry.id !== horse.id && entry.legNumber === horse.legNumber,
+  );
+  if (activeAfterWithdrawal.length === 0) return "LAST_ACTIVE" as const;
+  const replacement =
+    activeAfterWithdrawal.find(
+      (entry) => entry.gazetteOrder > horse.gazetteOrder,
+    ) ?? activeAfterWithdrawal[0];
+  await transaction.raceDayHorse.update({
+    where: { id: horseId },
+    data: { status: "WITHDRAWN" },
+  });
+
+  const selections = await transaction.ticketSelection.findMany({
+    where: {
+      currentHorseId: horse.id,
+      ticket: {
+        raceDayId: horse.raceDayId,
+        status: { in: ["PENDING", "APPROVED"] },
+      },
+    },
+    select: { id: true },
+  });
+  for (const selection of selections) {
+    await transaction.ticketSelection.update({
+      where: { id: selection.id },
+      data: {
+        currentHorseId: replacement.id,
+        wasSubstituted: true,
+        replacements: {
+          create: {
+            fromHorseId: horse.id,
+            toHorseId: replacement.id,
+          },
+        },
+      },
+    });
+  }
+  return "WITHDRAWN" as const;
+}
+
 export async function createManualRaceDay(
   _previousState: HorseManagementState,
   formData: FormData,
@@ -328,7 +392,7 @@ export async function addHorse(
           where: { id: raceDayId },
           select: { status: true },
         });
-        if (!day || day.status !== "OPEN") throw new Error("La jornada no está abierta para cambios.");
+        if (!day || day.status === "SETTLED") throw new Error("La jornada finalizada ya no admite cambios.");
         const lastEntry = await transaction.raceDayHorse.findFirst({
           where: { raceDayId, legNumber },
           orderBy: { gazetteOrder: "desc" },
@@ -349,7 +413,7 @@ export async function addHorse(
   } catch (error) {
     const knownError = expectedHorseWriteError(error);
     if (knownError) return knownError;
-    if (error instanceof Error && error.message === "La jornada no está abierta para cambios.") {
+    if (error instanceof Error && error.message === "La jornada finalizada ya no admite cambios.") {
       return { error: error.message };
     }
     throw error;
@@ -388,7 +452,7 @@ export async function addHorsesBulk(
           where: { id: raceDayId },
           select: { status: true },
         });
-        if (!day || day.status !== "OPEN") throw new Error("La jornada no está abierta para cambios.");
+        if (!day || day.status === "SETTLED") throw new Error("La jornada finalizada ya no admite cambios.");
         const lastEntry = await transaction.raceDayHorse.findFirst({
           where: { raceDayId, legNumber },
           orderBy: { gazetteOrder: "desc" },
@@ -432,7 +496,7 @@ export async function addHorsesBulk(
   } catch (error) {
     const knownError = expectedHorseWriteError(error);
     if (knownError) return knownError;
-    if (error instanceof Error && error.message === "La jornada no está abierta para cambios.") {
+    if (error instanceof Error && error.message === "La jornada finalizada ya no admite cambios.") {
       return { error: error.message };
     }
     throw error;
@@ -459,14 +523,18 @@ export async function updateHorse(
     throw error;
   }
   try {
-    const horse = await prisma.raceDayHorse.findUnique({
-      where: { id },
-      select: { raceDay: { select: { status: true } } },
+    const result = await prisma.$transaction(async (transaction) => {
+      const horse = await transaction.raceDayHorse.findUnique({
+        where: { id },
+        select: { raceDay: { select: { status: true } } },
+      });
+      if (!horse || horse.raceDay.status === "SETTLED") return "FINALIZED" as const;
+      await transaction.raceDayHorse.update({ where: { id }, data: { name, saddlecloth } });
+      return "UPDATED" as const;
     });
-    if (!horse || horse.raceDay.status !== "OPEN") {
-      return { error: "No se puede editar un ejemplar de una jornada cerrada." };
+    if (result === "FINALIZED") {
+      return { error: "No se puede editar un ejemplar de una jornada finalizada." };
     }
-    await prisma.raceDayHorse.update({ where: { id }, data: { name, saddlecloth } });
   } catch (error) {
     const knownError = expectedHorseWriteError(error);
     if (knownError) return knownError;
@@ -490,23 +558,31 @@ export async function deleteHorse(
       where: { id },
       select: { raceDayId: true, raceDay: { select: { status: true } } },
     });
-    if (!horse || horse.raceDay.status !== "OPEN") return "CLOSED" as const;
+    if (!horse || horse.raceDay.status === "SETTLED") return "FINALIZED" as const;
     const selectionCount = await transaction.ticketSelection.count({
       where: { OR: [{ originalHorseId: id }, { currentHorseId: id }] },
     });
     const replacementCount = await transaction.horseReplacement.count({
       where: { OR: [{ fromHorseId: id }, { toHorseId: id }] },
     });
-    if (selectionCount || replacementCount) return "IN_USE" as const;
+    if (selectionCount || replacementCount) {
+      const withdrawal = await withdrawHorseInTransaction(transaction, id);
+      return withdrawal;
+    }
     await transaction.raceDayHorse.delete({ where: { id } });
     return "DELETED" as const;
   });
-  if (result === "CLOSED") return { error: "No se puede eliminar un ejemplar de una jornada cerrada." };
-  if (result === "IN_USE") {
-    return { error: "Este ejemplar está vinculado a tickets. Márcalo como retirado para conservar el historial." };
-  }
+  if (result === "FINALIZED") return { error: "La jornada finalizada conserva su historial y no admite cambios." };
+  if (result === "LAST_ACTIVE") return { error: "No se puede quitar el último ejemplar activo de la válida." };
   revalidateHorseManagement();
-  return { success: "Ejemplar eliminado." };
+  return {
+    success:
+      result === "WITHDRAWN"
+        ? "El ejemplar tenía tickets asociados: se retiró y sus cuadros se sustituyeron para conservar el historial."
+        : result === "ALREADY_WITHDRAWN"
+          ? "El ejemplar ya estaba retirado y se conservó por sus referencias históricas."
+        : "Ejemplar eliminado.",
+  };
 }
 
 export async function clearRaceLeg(
@@ -528,7 +604,7 @@ export async function clearRaceLeg(
       where: { id: raceDayId },
       select: { status: true },
     });
-    if (!day || day.status !== "OPEN") return "CLOSED" as const;
+    if (!day || day.status === "SETTLED") return "FINALIZED" as const;
     const entries = await transaction.raceDayHorse.findMany({
       where: { raceDayId, legNumber },
       select: { id: true },
@@ -549,7 +625,7 @@ export async function clearRaceLeg(
     await transaction.raceDayHorse.deleteMany({ where: { raceDayId, legNumber } });
     return "CLEARED" as const;
   });
-  if (result === "CLOSED") return { error: "La jornada no está abierta para cambios." };
+  if (result === "FINALIZED") return { error: "La jornada finalizada ya no admite cambios." };
   if (result === "IN_USE") {
     return { error: "Hay ejemplares de esta válida vinculados a tickets. No se eliminó ningún registro." };
   }
@@ -576,68 +652,22 @@ export async function toggleHorseStatus(
   try {
     await prisma.$transaction(
       async (transaction) => {
-      const horse = await transaction.raceDayHorse.findUnique({
-        where: { id },
-        include: {
-          raceDay: {
-            select: {
-              id: true,
-              status: true,
-              entries: {
-                where: { status: "ACTIVE" },
-                orderBy: { gazetteOrder: "asc" },
-                select: { id: true, gazetteOrder: true },
-              },
-            },
-          },
-        },
-      });
-      if (!horse || horse.raceDay.status !== "OPEN") {
-        throw new Error("No se puede cambiar el estado de una jornada cerrada.");
-      }
-
-      if (horse.status === status) return;
       if (status === "ACTIVE") {
+        const horse = await transaction.raceDayHorse.findUnique({
+          where: { id },
+          select: { status: true, raceDay: { select: { status: true } } },
+        });
+        if (!horse || horse.raceDay.status === "SETTLED") {
+          throw new Error("La jornada finalizada ya no admite cambios.");
+        }
+        if (horse.status === "ACTIVE") return;
         await transaction.raceDayHorse.update({ where: { id }, data: { status } });
         return;
       }
-
-      const activeAfterWithdrawal = horse.raceDay.entries.filter(
-        (entry) => entry.id !== horse.id,
-      );
-      if (activeAfterWithdrawal.length === 0) {
+      const result = await withdrawHorseInTransaction(transaction, id);
+      if (result === "FINALIZED") throw new Error("La jornada finalizada ya no admite cambios.");
+      if (result === "LAST_ACTIVE") {
         throw new Error("No se puede retirar el último ejemplar activo de la válida.");
-      }
-      const replacement =
-        activeAfterWithdrawal.find(
-          (entry) => entry.gazetteOrder > horse.gazetteOrder,
-        ) ?? activeAfterWithdrawal[0];
-      await transaction.raceDayHorse.update({ where: { id }, data: { status } });
-
-      const selections = await transaction.ticketSelection.findMany({
-        where: {
-          currentHorseId: horse.id,
-          ticket: {
-            raceDayId: horse.raceDayId,
-            status: { in: ["PENDING", "APPROVED"] },
-          },
-        },
-        select: { id: true },
-      });
-      for (const selection of selections) {
-        await transaction.ticketSelection.update({
-          where: { id: selection.id },
-          data: {
-            currentHorseId: replacement.id,
-            wasSubstituted: true,
-            replacements: {
-              create: {
-                fromHorseId: horse.id,
-                toHorseId: replacement.id,
-              },
-            },
-          },
-        });
       }
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
@@ -645,7 +675,7 @@ export async function toggleHorseStatus(
   } catch (error) {
     if (
       error instanceof Error &&
-      (error.message === "No se puede cambiar el estado de una jornada cerrada." ||
+      (error.message === "La jornada finalizada ya no admite cambios." ||
         error.message === "No se puede retirar el último ejemplar activo de la válida.")
     ) {
       return { error: error.message };

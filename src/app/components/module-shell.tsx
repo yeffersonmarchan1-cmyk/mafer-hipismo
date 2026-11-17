@@ -3,6 +3,16 @@ import type { ReactNode } from "react";
 import { logout } from "@/app/actions/auth";
 import { InstallAppButton } from "@/app/components/install-app-button";
 import { ModuleNavigation } from "@/app/components/module-navigation";
+import {
+  BadgeCheck,
+  CalendarDays,
+  ClipboardList,
+  Settings,
+  Shield,
+  Ticket,
+  Trophy,
+  Users,
+} from "lucide-react";
 
 type ModuleShellProps = {
   children: ReactNode;
@@ -11,18 +21,18 @@ type ModuleShellProps = {
 };
 
 const playerModules = [
-  { href: "/app/play", label: "Jugar 5y6", code: "01" },
-  { href: "/app/tickets", label: "Mis tickets", code: "02" },
-  { href: "/app/board", label: "Pizarra oficial", code: "03" },
+  { href: "/app/play", label: "Jugar 5y6", icon: Trophy },
+  { href: "/app/tickets", label: "Mis tickets", icon: Ticket },
+  { href: "/app/board", label: "Pizarra oficial", icon: ClipboardList },
 ];
 
 const adminModules = [
-  { href: "/admin", label: "Panel general", code: "00" },
-  { href: "/admin/jornadas", label: "Jornadas e inscritos", code: "01" },
-  { href: "/admin/payments", label: "Validación de pagos", code: "02" },
-  { href: "/admin/settlement", label: "Resultados", code: "03" },
-  { href: "/admin/settings", label: "Configuración", code: "04" },
-  { href: "/admin/users", label: "Usuarios", code: "05" },
+  { href: "/admin", label: "Panel general", icon: Shield },
+  { href: "/admin/jornadas", label: "Jornadas e inscritos", icon: CalendarDays },
+  { href: "/admin/payments", label: "Validación de pagos", icon: BadgeCheck },
+  { href: "/admin/settlement", label: "Resultados", icon: Trophy },
+  { href: "/admin/settings", label: "Configuración", icon: Settings },
+  { href: "/admin/users", label: "Usuarios", icon: Users },
 ];
 
 export function ModuleShell({ children, fullName, role }: ModuleShellProps) {

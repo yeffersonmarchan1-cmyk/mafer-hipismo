@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { connection } from "next/server";
 import { closeRaceDay } from "@/app/admin/actions";
 import { closeDueRaceDays as closeScheduledRaceDays } from "@/lib/close-race-days";
@@ -109,20 +110,34 @@ export default async function RaceDaysAdminPage() {
                     : ""}
                 </p>
               </div>
-              <span className={`rounded-full px-3 py-1.5 text-[10px] font-bold ${day.status === "OPEN" ? "bg-emerald-400/10 text-emerald-300" : "bg-white/[0.06] text-slate-400"}`}>
-                {day.status === "OPEN" ? "Apuestas abiertas" : day.status === "SETTLED" ? "Liquidada" : "Jornada cerrada"}
+              <span className={`rounded-full px-3 py-1.5 text-[10px] font-bold ${day.status === "OPEN" ? "bg-emerald-400/10 text-emerald-300" : day.status === "SETTLED" ? "bg-sky-400/10 text-sky-200" : "bg-amber-400/10 text-amber-200"}`}>
+                {day.status === "OPEN" ? "Abierta · acepta apuestas" : day.status === "SETTLED" ? "Finalizada" : "Cerrada · en curso"}
               </span>
-              {day.status === "OPEN" && (
-                <form action={closeRaceDay}>
-                  <input name="raceDayId" type="hidden" value={day.id} />
-                  <button className="button-primary min-h-9 px-3 py-1 text-[10px]" type="submit">
-                    Cerrar apuestas
-                  </button>
-                </form>
-              )}
             </header>
 
-            {day.status === "OPEN" ? (
+            <RaceDayPhases status={day.status} />
+
+            {day.status === "OPEN" && (
+              <form action={closeRaceDay} className="border-b border-white/[0.06] px-4 py-4 sm:px-6">
+                <input name="raceDayId" type="hidden" value={day.id} />
+                <button className="button-primary min-h-10 px-4 py-2 text-xs" type="submit">
+                  Cerrar apuestas · iniciar carreras
+                </button>
+                <p className="mt-2 text-[10px] leading-5 text-slate-500">
+                  Al cerrar, no se aceptarán más cuadros y los tickets aprobados se publicarán en la pizarra.
+                </p>
+              </form>
+            )}
+
+            {day.status === "CLOSED" && (
+              <div className="border-b border-white/[0.06] px-4 py-4 sm:px-6">
+                <Link className="button-primary min-h-10 px-4 py-2 text-xs" href="/admin/settlement">
+                  Ingresar resultados y finalizar
+                </Link>
+              </div>
+            )}
+
+            {day.status !== "SETTLED" ? (
               <HorseManagementPanel
                 horses={day.entries.map((horse) => ({
                   id: horse.id,
@@ -177,5 +192,39 @@ function StatCard({ label, value }: { label: string; value: string }) {
       <p className="text-xs text-slate-500">{label}</p>
       <p className="mt-3 text-lg font-semibold text-white">{value}</p>
     </article>
+  );
+}
+
+function RaceDayPhases({ status }: { status: "OPEN" | "CLOSED" | "SETTLED" }) {
+  const activePhase = status === "OPEN" ? 0 : status === "CLOSED" ? 1 : 2;
+  const phases = [
+    { title: "Abierta", detail: "Se reciben cuadros" },
+    { title: "Cerrada / En curso", detail: "Pizarra y acumulado públicos" },
+    { title: "Finalizada", detail: "Resultados y ganadores" },
+  ];
+  return (
+    <ol aria-label="Fases de la jornada" className="grid gap-2 border-b border-white/[0.06] p-4 sm:grid-cols-3 sm:p-5">
+      {phases.map((phase, index) => {
+        const complete = index < activePhase;
+        const current = index === activePhase;
+        return (
+          <li
+            aria-current={current ? "step" : undefined}
+            className={`flex items-center gap-3 rounded-xl border p-3 ${current ? "border-red-500/25 bg-red-500/[0.07]" : complete ? "border-green-500/15 bg-green-500/[0.035]" : "border-white/[0.06] bg-white/[0.015]"}`}
+            key={phase.title}
+          >
+            <span className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${current ? "bg-red-500 text-white" : complete ? "bg-green-500/15 text-green-300" : "bg-white/[0.06] text-slate-500"}`}>
+              {index + 1}
+            </span>
+            <span>
+              <span className={`block text-xs font-bold ${current ? "text-white" : complete ? "text-green-200" : "text-slate-400"}`}>
+                {phase.title}
+              </span>
+              <span className="mt-1 block text-[9px] text-slate-500">{phase.detail}</span>
+            </span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }

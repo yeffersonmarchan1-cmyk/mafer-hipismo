@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { LucideIcon } from "lucide-react";
 
 type Module = {
   href: string;
   label: string;
-  code: string;
+  icon: LucideIcon;
 };
 
 export function ModuleNavigation({
@@ -51,19 +52,19 @@ export function ModuleNavigation({
             href={module.href}
             key={module.href}
           >
-            <span
+            <module.icon
+              aria-hidden="true"
               className={
                 mobile
-                  ? `text-[9px] font-bold ${active ? "text-red-400" : "text-slate-600"}`
-                  : `flex size-7 items-center justify-center rounded-lg border text-[10px] font-bold ${
+                  ? `size-5 shrink-0 ${active ? "text-red-400" : "text-slate-600"}`
+                  : `size-5 shrink-0 ${
                       active
-                        ? "border-red-500/30 bg-red-500/10 text-red-300"
-                        : "border-white/[0.08] text-slate-500 group-hover:border-red-500/30 group-hover:text-red-300"
+                        ? "text-red-300"
+                        : "text-slate-500 group-hover:text-red-300"
                     }`
               }
-            >
-              {module.code}
-            </span>
+              strokeWidth={1.8}
+            />
             <span className={mobile ? "max-w-16 truncate" : ""}>{module.label}</span>
           </Link>
         );
