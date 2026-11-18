@@ -67,7 +67,7 @@ export async function saveTicketEdits(
             selectedHorseCount: true,
             selections: {
               orderBy: { id: "asc" },
-              select: { id: true },
+              select: { id: true, legNumber: true },
             },
             raceDay: {
               select: {
@@ -97,6 +97,19 @@ export async function saveTicketEdits(
           throw new TicketEditError(
             `Debes mantener exactamente ${ticket.selectedHorseCount} ejemplares seleccionados.`,
           );
+        }
+
+        const originalCounts = Array.from({ length: 6 }, (_, index) =>
+          ticket.selections.filter(
+            (selection) => selection.legNumber === index + 1,
+          ).length,
+        );
+        for (let index = 0; index < selectionsByLeg.length; index += 1) {
+          if (selectionsByLeg[index].length !== originalCounts[index]) {
+            throw new TicketEditError(
+              `Debes mantener exactamente ${originalCounts[index]} ejemplares en la válida ${index + 1}.`,
+            );
+          }
         }
 
         const activeHorsesById = new Map(

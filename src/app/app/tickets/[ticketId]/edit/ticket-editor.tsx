@@ -41,6 +41,11 @@ export function TicketEditor({
   const [selectedIds, setSelectedIds] = useState(
     () => new Set(initialSelections.map((selection) => selection.horseId)),
   );
+  const [selectionNotice, setSelectionNotice] = useState("");
+  const originalCounts = Array.from({ length: 6 }, (_, index) =>
+    initialSelections.filter((selection) => selection.legNumber === index + 1)
+      .length,
+  );
 
   const selectionsByLeg = useMemo(
     () =>
@@ -62,13 +67,27 @@ export function TicketEditor({
   const costWithinPaidAmount = editCostCents <= paidCents;
   const canSave =
     selectedCount === requiredHorseCount &&
-    counts.every((count) => count > 0) &&
+    counts.every((count, index) => count === originalCounts[index]) &&
     costWithinPaidAmount;
   const activeHorses = horses
     .filter((horse) => horse.legNumber === activeLeg)
     .sort((left, right) => left.gazetteOrder - right.gazetteOrder);
 
   function toggleHorse(id: string) {
+    const horse = activeHorses.find((item) => item.id === id);
+    if (!horse) return;
+
+    if (
+      !selectedIds.has(id) &&
+      counts[horse.legNumber - 1] >= originalCounts[horse.legNumber - 1]
+    ) {
+      setSelectionNotice(
+        `La válida ${horse.legNumber} ya tiene sus ${originalCounts[horse.legNumber - 1]} cupos. Desmarca un caballo de esta válida para reemplazarlo.`,
+      );
+      return;
+    }
+
+    setSelectionNotice("");
     setSelectedIds((previous) => {
       const next = new Set(previous);
       if (next.has(id)) next.delete(id);
@@ -132,7 +151,7 @@ export function TicketEditor({
         <header className="border-b border-white/[0.07] px-4 py-4">
           <h2 className="text-sm font-bold text-white">Selecciona tus ejemplares</h2>
           <p className="mt-1 text-xs text-slate-500">
-            Mantén la cantidad original y al menos un caballo por válida. Solo aparecen ejemplares activos.
+            Mantén en cada válida la cantidad original de caballos. Para reemplazar uno, desmárcalo primero en esa misma válida. Solo aparecen ejemplares activos.
           </p>
         </header>
 
@@ -154,7 +173,7 @@ export function TicketEditor({
               >
                 <span className="text-xs font-black">V{legNumber}</span>
                 <span className="mt-0.5 text-[9px] text-slate-500">
-                  {count} marc.
+                  {count} / {originalCounts[index]}
                 </span>
               </button>
             );
@@ -194,6 +213,11 @@ export function TicketEditor({
         </div>
       </section>
 
+      {selectionNotice && (
+        <p role="status" className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-3 text-sm text-amber-200">
+          {selectionNotice}
+        </p>
+      )}
       {selectedCount === requiredHorseCount && !costWithinPaidAmount && (
         <p className="mt-4 rounded-xl border border-rose-500/20 bg-rose-500/[0.06] p-3 text-sm text-rose-200">
           El costo calculado supera el monto pagado. Ajusta la combinación para continuar.
