@@ -80,9 +80,9 @@ export default async function PaymentsAdminPage() {
           <article className="rounded-2xl border border-white/[0.08] bg-[#1a1d26] p-4 shadow-lg shadow-black/10 sm:p-5" key={ticket.id}>
             <header className="flex flex-wrap items-start justify-between gap-3 border-b border-white/[0.07] pb-4">
               <div>
-                <p className="text-sm font-bold text-white">Ticket #{ticket.ticketNumber} · {ticket.user.fullName}</p>
+                <p className="text-sm font-bold text-white">Ticket #{ticket.ticketNumber} · {ticket.user?.fullName ?? ticket.guestName ?? "Jugador presencial"}</p>
                 <p className="mt-1 text-[10px] text-slate-500">
-                  {raceDayVenueLabel(ticket.raceDay.venue)} · {new Intl.DateTimeFormat("es-VE", { dateStyle: "short", timeZone: "UTC" }).format(ticket.raceDay.date)} · C.I. {ticket.user.cedula} · WhatsApp {formatVenezuelanPhone(ticket.user.whatsappPhone)} · {new Intl.DateTimeFormat("es-VE", { dateStyle: "short", timeStyle: "short" }).format(ticket.submittedAt)}
+                  {raceDayVenueLabel(ticket.raceDay.venue)} · {new Intl.DateTimeFormat("es-VE", { dateStyle: "short", timeZone: "UTC" }).format(ticket.raceDay.date)} · {ticket.user ? `C.I. ${ticket.user.cedula} · WhatsApp ${formatVenezuelanPhone(ticket.user.whatsappPhone)} · ` : ""}{new Intl.DateTimeFormat("es-VE", { dateStyle: "short", timeStyle: "short" }).format(ticket.submittedAt)}
                 </p>
               </div>
               <span className="rounded-full border border-amber-400/15 bg-amber-400/[0.07] px-3 py-1 text-[10px] font-bold text-amber-200">Pendiente</span>

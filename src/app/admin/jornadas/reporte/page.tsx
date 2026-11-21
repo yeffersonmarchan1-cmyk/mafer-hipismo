@@ -8,6 +8,7 @@ import { requireAdmin } from "@/lib/auth";
 import { formatBsFromCents } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { raceDayVenueLabel } from "@/lib/race-day";
+import { ticketOwnerName } from "@/lib/ticket-owner";
 
 function toCents(amount: Prisma.Decimal) {
   return BigInt(
@@ -140,7 +141,7 @@ export default async function RaceDayReportPage({
               <article className="break-inside-avoid rounded-lg border border-slate-300 p-3" key={ticket.id}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-bold text-slate-950">
-                    Ticket #{ticket.ticketNumber} · {ticket.user.fullName}
+                    Ticket #{ticket.ticketNumber} · {ticketOwnerName(ticket)}
                   </p>
                   <p className="text-xs font-semibold text-slate-700">
                     {ticket.combinations.toString()} combinación(es) · {formatBsFromCents(toCents(ticket.amountVes))}

@@ -20,6 +20,7 @@ const playerModules = [
 const adminModules = [
   { href: "/admin", label: "Panel general", icon: "shield" },
   { href: "/admin/jornadas", label: "Jornadas e inscritos", icon: "calendar" },
+  { href: "/admin/manual-bets", label: "Jugadas manuales", icon: "ticket" },
   { href: "/admin/payments", label: "Validación de pagos", icon: "badge-check" },
   { href: "/admin/settlement", label: "Resultados", icon: "trophy" },
   { href: "/admin/settings", label: "Configuración", icon: "settings" },

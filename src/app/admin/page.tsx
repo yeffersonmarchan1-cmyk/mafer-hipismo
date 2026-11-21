@@ -5,12 +5,13 @@ import { raceDayVenueLabel } from "@/lib/race-day";
 
 const modules = [
   { href: "/admin/jornadas", label: "Jornadas e inscritos", detail: "Crear reuniones, importar Gaceta y administrar retirados.", icon: "01" },
-  { href: "/admin/payments", label: "Validación de pagos", detail: "Revisar comprobantes, montos y tickets pendientes.", icon: "02" },
-  { href: "/admin/settlement", label: "Resultados y liquidación", detail: "Registrar ganadores y calcular el pozo.", icon: "03" },
-  { href: "/admin/settings", label: "Configuración", detail: "Pago móvil, tasa de cambio y mensajes.", icon: "04" },
-  { href: "/admin/users", label: "Usuarios", detail: "Consultar cuentas y estado de acceso.", icon: "05" },
-  { href: "/admin/ledger", label: "Libro contable", detail: "Conciliar pagos, comisiones, premios y acumulados.", icon: "06" },
-  { href: "/admin/alerts", label: "Alertas operativas", detail: "Revisar errores del cron, Storage y liquidaciones.", icon: "07" },
+  { href: "/admin/manual-bets", label: "Jugadas manuales", detail: "Registrar y aprobar tickets de personas sin cuenta.", icon: "02" },
+  { href: "/admin/payments", label: "Validación de pagos", detail: "Revisar comprobantes, montos y tickets pendientes.", icon: "03" },
+  { href: "/admin/settlement", label: "Resultados y liquidación", detail: "Registrar ganadores y calcular el pozo.", icon: "04" },
+  { href: "/admin/settings", label: "Configuración", detail: "Pago móvil, tasa de cambio y mensajes.", icon: "05" },
+  { href: "/admin/users", label: "Usuarios", detail: "Consultar cuentas y estado de acceso.", icon: "06" },
+  { href: "/admin/ledger", label: "Libro contable", detail: "Conciliar pagos, comisiones, premios y acumulados.", icon: "07" },
+  { href: "/admin/alerts", label: "Alertas operativas", detail: "Revisar errores del cron, Storage y liquidaciones.", icon: "08" },
 ];
 
 export default async function AdminDashboardPage() {
@@ -67,7 +68,7 @@ export default async function AdminDashboardPage() {
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Espacios de trabajo</p>
             <h2 className="mt-1 text-lg font-semibold text-white">Módulos administrativos</h2>
           </div>
-          <span className="text-[10px] text-slate-500">01 — 07</span>
+          <span className="text-[10px] text-slate-500">01 — 08</span>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           {modules.map((module) => (

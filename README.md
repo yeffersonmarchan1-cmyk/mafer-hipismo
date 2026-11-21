@@ -7,8 +7,9 @@ continúa disponible para generar el instalador Windows de escritorio.
 ## Módulos
 
 - **Jugador (`USER`)**: elegir entre jornadas disponibles de La Rinconada o Valencia, jugar al Cuadro Perfecto, consultar mis tickets y la pizarra oficial.
-- **Administrador (`ADMIN`)**: jornadas e inscritos, validación de pagos,
-  resultados/liquidación, configuración y usuarios.
+- **Administrador (`ADMIN`)**: jornadas e inscritos, jugadas manuales para
+  personas sin cuenta, validación de pagos, resultados/liquidación,
+  configuración y usuarios.
 - Los datos del jugador y los tickets se leen en el servidor con el ID de la
   sesión autenticada. La pizarra sólo publica tickets aprobados después del
   cierre de la jornada.
@@ -124,6 +125,11 @@ del jugador muestra gualdrapa y nombre de todos los ejemplares activos.
 - Aprobar un pago lo incluye en el pozo; rechazarlo no lo suma. Retirar un
   ejemplar reemplaza las selecciones existentes por el siguiente ejemplar activo
   en el orden de Gaceta, con vuelta al inicio y registro de auditoría.
+- En `/admin/manual-bets`, administración puede registrar una jugada presencial
+  a nombre de una persona sin cuenta, con teléfono opcional. Se valida la misma
+  jornada, selección y monto; el ticket queda aprobado al registrarlo y participa
+  en el pozo, la pizarra, los reportes y la liquidación. La persona no necesita
+  crear una cuenta ni adjuntar un comprobante en la web.
 - Al cerrar la jornada, la pizarra expone públicamente solo tickets aprobados.
   Al cerrar manualmente una jornada, el sistema descarga un PDF administrativo
   con los cuadros aprobados; también se puede descargar desde jornadas cerradas

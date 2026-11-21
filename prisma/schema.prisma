@@ -156,7 +156,9 @@ model Ticket {
   id                 String            @id @default(cuid())
   ticketNumber       Int
   raceDayId          String
-  userId             String
+  userId             String?
+  guestName          String?
+  guestPhone         String?
   combinations       BigInt
   selectedHorseCount Int
   amountVes          Decimal           @db.Decimal(18, 2)
@@ -166,7 +168,7 @@ model Ticket {
   reviewedAt         DateTime?
   reviewedById       String?
   raceDay            RaceDay           @relation(fields: [raceDayId], references: [id], onDelete: Restrict)
-  user               User              @relation("TicketOwner", fields: [userId], references: [id], onDelete: Restrict)
+  user               User?             @relation("TicketOwner", fields: [userId], references: [id], onDelete: Restrict)
   reviewedBy         User?             @relation("TicketReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
   selections         TicketSelection[]
   paymentProof       PaymentProof?

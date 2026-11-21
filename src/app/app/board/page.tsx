@@ -5,6 +5,7 @@ import { closeDueRaceDays } from "@/lib/close-race-days";
 import { formatBs, formatBsFromCents } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { raceDayVenueLabel } from "@/lib/race-day";
+import { ticketOwnerName } from "@/lib/ticket-owner";
 
 export default async function OfficialBoardPage({
   searchParams,
@@ -43,7 +44,11 @@ export default async function OfficialBoardPage({
           ticketPayouts: {
             orderBy: { ticket: { ticketNumber: "asc" } },
             include: {
-              ticket: { include: { user: { select: { fullName: true } } } },
+              ticket: {
+                include: {
+                  user: { select: { fullName: true } },
+                },
+              },
             },
           },
         },
@@ -176,7 +181,7 @@ export default async function OfficialBoardPage({
                 {raceDay.settlement.ticketPayouts.map((payout) => (
                   <div className="flex items-center justify-between gap-3 px-4 py-3" key={payout.id}>
                     <div>
-                      <p className="text-xs font-semibold text-white">{payout.ticket.user.fullName}</p>
+                      <p className="text-xs font-semibold text-white">{ticketOwnerName(payout.ticket)}</p>
                       <p className="mt-1 text-[10px] text-slate-500">Ticket #{payout.ticket.ticketNumber}</p>
                     </div>
                     <p className="text-sm font-black text-green-300">{formatBs(payout.amountVes.toFixed(2))}</p>
@@ -205,7 +210,7 @@ export default async function OfficialBoardPage({
         {raceDay.tickets.map((ticket) => (
           <article className="rounded-2xl border border-white/[0.08] bg-[#0d151a] p-5" key={ticket.id}>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-white">{ticket.user.fullName}</p>
+              <p className="text-sm font-semibold text-white">{ticketOwnerName(ticket)}</p>
               <span className="rounded-full bg-emerald-400/[0.08] px-3 py-1 text-[10px] font-bold text-emerald-300">
                 Ticket #{ticket.ticketNumber}
               </span>

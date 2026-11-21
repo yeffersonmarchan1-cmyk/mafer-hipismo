@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { formatBsFromCents } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { raceDayVenueLabel } from "@/lib/race-day";
+import { ticketOwnerName } from "@/lib/ticket-owner";
 
 const pageWidth = 595.28;
 const pageHeight = 841.89;
@@ -185,7 +186,7 @@ export async function GET(
     }
     drawText(
       page,
-      `Ticket #${ticket.ticketNumber} - ${ticket.user.fullName}`,
+      `Ticket #${ticket.ticketNumber} - ${ticketOwnerName(ticket)}`,
       margin + 7,
       y - 11,
       bold,
